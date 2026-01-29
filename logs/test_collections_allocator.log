@@ -1,0 +1,6 @@
+[2] collections_allocator_set :    2 : 2026-01-26  14:04:24                     
+================================================================================
+Running: list_with_allocator                                    18.153 ms [PASS]
+Running: farray_with_allocator                                   2.485 ms [PASS]
+================================================================================
+[2]     TESTS=  2        PASS=  2        FAIL=  0        SKIP=  0
