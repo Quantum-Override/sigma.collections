@@ -23,7 +23,7 @@ Sigma.collections provides a unified interface for working with different types 
 
 ## Dense Collections
 
-### FArray - Fixed Array
+### FArray - Flex Array
 
 **When to use**: Small, fixed-size value types that won't grow.
 

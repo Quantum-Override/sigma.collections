@@ -19,7 +19,7 @@ Complete function reference for sigma.collections library.
 
 **Header**: `<sigma.collections/farray.h>`
 
-Fixed-stride array for value types.
+Flex array for value types with configurable stride.
 
 ### Functions
 
