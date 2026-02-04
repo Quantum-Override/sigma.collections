@@ -75,7 +75,7 @@ slotarray slotarray_create_view(parray arr);
 typedef struct sc_sparse_i {
     bool (*is_empty_slot)(object, usize);
     usize (*capacity)(object);
-    int (*get_at)(object, usize, object *);
+    int (*get_at)(object, usize, object*);
 } sc_sparse_i;
 
 // sparse iterator internal functions

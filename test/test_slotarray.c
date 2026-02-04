@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "collections.h"
 #include "farray.h"
 #include "parray.h"
 #include "slotarray.h"
@@ -392,6 +393,116 @@ static void test_parray_as_slotarray(void) {
     PArray.dispose(arr);
 }
 
+// sparse iterator tests
+static void test_slotarray_create_iterator(void) {
+    slotarray sa = SlotArray.new(5);
+    Assert.isNotNull(sa, "SlotArray creation failed");
+
+    sparse_iterator it = SlotArray.create_iterator(sa);
+    Assert.isNotNull(it, "SparseIterator creation failed");
+
+    SparseIterator.dispose(it);
+    SlotArray.dispose(sa);
+}
+
+static void test_slotarray_iterator_empty(void) {
+    slotarray sa = SlotArray.new(5);
+
+    sparse_iterator it = SlotArray.create_iterator(sa);
+    Assert.isNotNull(it, "SparseIterator creation failed");
+
+    // Empty slotarray should have no items to iterate
+    bool has_next = SparseIterator.next(it);
+    Assert.isFalse(has_next, "Empty slotarray should have no items");
+
+    SparseIterator.dispose(it);
+    SlotArray.dispose(sa);
+}
+
+static void test_slotarray_iterator_sparse(void) {
+    slotarray sa = SlotArray.new(10);
+
+    // Add items at non-contiguous positions
+    int *p1 = malloc(sizeof(int));
+    *p1 = 100;
+    int *p2 = malloc(sizeof(int));
+    *p2 = 200;
+    int *p3 = malloc(sizeof(int));
+    *p3 = 300;
+
+    SlotArray.add(sa, p1);           // Index 0
+    int h2 = SlotArray.add(sa, p2);  // Index 1
+    SlotArray.add(sa, p3);           // Index 2
+
+    // Remove middle element to create sparse array
+    SlotArray.remove_at(sa, h2);
+
+    sparse_iterator it = SlotArray.create_iterator(sa);
+    Assert.isNotNull(it, "SparseIterator creation failed");
+
+    // Should iterate over indices 0 and 2, skipping removed index 1
+    int count = 0;
+    int found_values[2] = {0};
+    while (SparseIterator.next(it)) {
+        object value = NULL;
+        int result = SparseIterator.current_value(it, &value);
+        Assert.areEqual(&(int){0}, &result, INT, "current_value failed");
+        Assert.isNotNull(value, "current_value returned NULL");
+
+        int *int_value = (int *)value;
+        found_values[count] = *int_value;
+        count++;
+    }
+
+    Assert.areEqual(&(int){2}, &count, INT, "Should find 2 items");
+    Assert.areEqual(&(int){100}, &found_values[0], INT, "First value mismatch");
+    Assert.areEqual(&(int){300}, &found_values[1], INT, "Second value mismatch");
+
+    free(p1);
+    free(p2);
+    free(p3);
+    SparseIterator.dispose(it);
+    SlotArray.dispose(sa);
+}
+
+static void test_slotarray_iterator_full(void) {
+    slotarray sa = SlotArray.new(5);
+
+    // Fill all slots
+    int *values[5];
+    for (int i = 0; i < 5; i++) {
+        values[i] = malloc(sizeof(int));
+        *values[i] = (i + 1) * 10;
+        int h = SlotArray.add(sa, values[i]);
+        Assert.isTrue(h >= 0, "Add failed at index %d", i);
+    }
+
+    sparse_iterator it = SlotArray.create_iterator(sa);
+    Assert.isNotNull(it, "SparseIterator creation failed");
+
+    // Should iterate over all 5 items
+    int count = 0;
+    while (SparseIterator.next(it)) {
+        count++;
+    }
+
+    Assert.areEqual(&(int){5}, &count, INT, "Should iterate over all 5 items");
+
+    // Test reset
+    SparseIterator.reset(it);
+    count = 0;
+    while (SparseIterator.next(it)) {
+        count++;
+    }
+    Assert.areEqual(&(int){5}, &count, INT, "After reset should iterate over all 5 items again");
+
+    for (int i = 0; i < 5; i++) {
+        free(values[i]);
+    }
+    SparseIterator.dispose(it);
+    SlotArray.dispose(sa);
+}
+
 //  register test cases
 __attribute__((constructor)) void init_slotarray_tests(void) {
     testset("core_slotarray_set", set_config, set_teardown);
@@ -414,4 +525,9 @@ __attribute__((constructor)) void init_slotarray_tests(void) {
     testcase("slotarray_from_value_array", test_slotarray_from_value_array);
 
     testcase("slotarray: attach parray", test_parray_as_slotarray);
+
+    testcase("slotarray_create_iterator", test_slotarray_create_iterator);
+    testcase("slotarray_iterator_empty", test_slotarray_iterator_empty);
+    testcase("slotarray_iterator_sparse", test_slotarray_iterator_sparse);
+    testcase("slotarray_iterator_full", test_slotarray_iterator_full);
 }

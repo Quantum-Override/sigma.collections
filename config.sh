@@ -25,7 +25,7 @@ fi
 
 CFLAGS="$BASE_CFLAGS"
 TST_CFLAGS="$CFLAGS -DTSTDBG -I/usr/include/sigmatest"
-LDFLAGS=""
+LDFLAGS="-L/usr/local/packages"
 TST_LDFLAGS="-lstest -L/usr/lib -L/usr/local/packages -l:sigma.core.alloc.o"
 
 SRC_DIR=src
@@ -37,7 +37,7 @@ TST_BUILD_DIR="$BUILD_DIR/test"
 
 # Bundle definitions:
 declare -A PACKAGES=(
-    ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray"
+    ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray indexarray"
 )
 
 # Build target definitions:

@@ -221,6 +221,20 @@ static slotarray slotarray_from_value_array(farray arr, usize stride) {
     return sa;
 }
 
+// Internal ops table for sparse iterator interface
+static const sc_sparse_i slotarray_sparse_ops = {
+    .is_empty_slot = (bool (*)(object, usize))slotarray_is_empty_slot,
+    .capacity = (usize (*)(object))slotarray_capacity,
+    .get_at = (int (*)(object, usize, object *))slotarray_get_at};
+
+// create a sparse iterator for the slotarray
+static sparse_iterator slotarray_create_iterator(slotarray sa) {
+    if (!sa) {
+        return NULL;
+    }
+    return sparse_iterator_new(sa, &slotarray_sparse_ops);
+}
+
 // public interface implementation
 const sc_slotarray_i SlotArray = {
     .new = slotarray_new,
@@ -233,4 +247,5 @@ const sc_slotarray_i SlotArray = {
     .is_empty_slot = slotarray_is_empty_slot,
     .capacity = slotarray_capacity,
     .clear = slotarray_clear,
+    .create_iterator = slotarray_create_iterator,
 };

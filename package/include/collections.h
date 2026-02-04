@@ -37,6 +37,7 @@
 
 /* Forward declarations */
 typedef struct iterator_s *iterator;
+typedef struct sparse_iterator_s *sparse_iterator;
 
 /* Iterator struct */
 struct iterator_s {
@@ -110,3 +111,39 @@ typedef struct sc_iterator_i {
 } sc_iterator_i;
 
 extern const sc_iterator_i Iterator;
+
+/* Sparse Iterator interface - for sparse collections */
+
+typedef struct sc_sparse_iterator_i {
+    /**
+     * @brief Advance to next occupied slot
+     * @param it The sparse iterator
+     * @return true if found occupied slot, false if no more
+     */
+    bool (*next)(sparse_iterator it);
+    /**
+     * @brief Get current slot index
+     * @param it The sparse iterator
+     * @return Current slot index
+     */
+    usize (*current_index)(sparse_iterator it);
+    /**
+     * @brief Get current value at current slot
+     * @param it The sparse iterator
+     * @param out_value Pointer to store the retrieved value
+     * @return 0 on OK; otherwise non-zero
+     */
+    int (*current_value)(sparse_iterator it, object *out_value);
+    /**
+     * @brief Reset iterator to beginning
+     * @param it The sparse iterator
+     */
+    void (*reset)(sparse_iterator it);
+    /**
+     * @brief Dispose iterator and free resources
+     * @param it The sparse iterator
+     */
+    void (*dispose)(sparse_iterator it);
+} sc_sparse_iterator_i;
+
+extern const sc_sparse_iterator_i SparseIterator;

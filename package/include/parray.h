@@ -39,13 +39,16 @@
 #pragma once
 
 #include "collection.h"
-#include "slotarray.h"
 // ----------------
 #include <sigma.core/types.h>
 
 // forward declaration of the array structure
 struct sc_pointer_array;
 typedef struct sc_pointer_array *parray;
+
+// forward declaration for slotarray
+struct sc_slotarray;
+typedef struct sc_slotarray *slotarray;
 
 /* Public interface for array operations                        */
 /* ============================================================ */
