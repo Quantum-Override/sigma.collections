@@ -1,17 +1,21 @@
-[2] core_slotarray_set        :   13 : 2026-02-04  08:17:08                     
+[2] core_slotarray_set        :   17 : 2026-02-04  09:20:24                     
 ================================================================================
-Running: slotarray_creation                                      4.365 ms [PASS]
-Running: slotarray_dispose                                       1.954 ms [PASS]
-Running: slotarray_set_add                                       2.271 ms [PASS]
-Running: slotarray_try_get_value                                 2.022 ms [PASS]
-Running: slotarray_remove_at                                     1.899 ms [PASS]
-Running: slotarray_no_growth                                     2.688 ms [PASS]
-Running: slotarray_is_valid_index                                2.382 ms [PASS]
-Running: slotarray_get_capacity                                  1.994 ms [PASS]
-Running: slotarray_clear                                         2.583 ms [PASS]
-Running: slotarray_stress                                        6.166 ms [PASS]
-Running: slotarray_from_pointer_array                            3.172 ms [PASS]
-Running: slotarray_from_value_array                              3.674 ms [PASS]
-Running: slotarray: attach parray                                2.217 ms [PASS]
+Running: slotarray_creation                                      3.959 ms [PASS]
+Running: slotarray_dispose                                       1.996 ms [PASS]
+Running: slotarray_set_add                                       3.367 ms [PASS]
+Running: slotarray_try_get_value                                 1.934 ms [PASS]
+Running: slotarray_remove_at                                     1.939 ms [PASS]
+Running: slotarray_no_growth                                     2.518 ms [PASS]
+Running: slotarray_is_valid_index                                2.334 ms [PASS]
+Running: slotarray_get_capacity                                  1.967 ms [PASS]
+Running: slotarray_clear                                         2.518 ms [PASS]
+Running: slotarray_stress                                        6.683 ms [PASS]
+Running: slotarray_from_pointer_array                            2.986 ms [PASS]
+Running: slotarray_from_value_array                              3.719 ms [PASS]
+Running: slotarray: attach parray                                2.179 ms [PASS]
+Running: slotarray_create_iterator                               1.703 ms [PASS]
+Running: slotarray_iterator_empty                                2.599 ms [PASS]
+Running: slotarray_iterator_sparse                               2.757 ms [PASS]
+Running: slotarray_iterator_full                                 2.795 ms [PASS]
 ================================================================================
-[2]     TESTS= 13        PASS= 13        FAIL=  0        SKIP=  0
+[2]     TESTS= 17        PASS= 17        FAIL=  0        SKIP=  0

@@ -34,9 +34,16 @@
 #pragma once
 
 #include "farray.h"
-#include "parray.h"
 struct sc_slotarray;
 typedef struct sc_slotarray *slotarray;
+
+// forward declaration for parray
+struct sc_pointer_array;
+typedef struct sc_pointer_array *parray;
+
+// forward declaration for sparse_iterator
+struct sparse_iterator_s;
+typedef struct sparse_iterator_s *sparse_iterator;
 
 /* Public interface for slotarray operations                    */
 /* ============================================================ */
@@ -94,5 +101,12 @@ typedef struct sc_slotarray_i {
     bool (*is_empty_slot)(slotarray, usize);  // Check if slot is empty
     usize (*capacity)(slotarray);             // Total slots
     void (*clear)(slotarray);                 // Reset all
+
+    /**
+     * @brief Create a sparse iterator for the slotarray
+     * @param sa The slotarray to iterate over
+     * @return New sparse iterator, or NULL on failure
+     */
+    sparse_iterator (*create_iterator)(slotarray);
 } sc_slotarray_i;
 extern const sc_slotarray_i SlotArray;
