@@ -26,7 +26,7 @@ fi
 CFLAGS="$BASE_CFLAGS"
 TST_CFLAGS="$CFLAGS -DTSTDBG -I/usr/include/sigmatest"
 LDFLAGS=""
-TST_LDFLAGS="-lstest -L/usr/lib -L/usr/local/lib -l:sigma.core.alloc.o"
+TST_LDFLAGS="-lstest -L/usr/lib -L/usr/local/packages -l:sigma.core.alloc.o"
 
 SRC_DIR=src
 BUILD_DIR=build

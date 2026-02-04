@@ -1,10 +1,10 @@
-[2] core_farray_set           :   13 : 2026-01-26  13:49:30                     
+[2] core_farray_set           :   13 : 2026-02-04  08:09:06                     
 ================================================================================
-Running: farray_creation                                         4.835 ms [PASS]
-Running: farray_init_from_null                                   2.234 ms [PASS]
-Running: farray_init_from_existing                               1.919 ms [PASS]
-Running: farray_get_capacity                                     2.226 ms [PASS]
-Running: farray_clear                                            2.400 ms [PASS]
+Running: farray_creation                                         4.374 ms [PASS]
+Running: farray_init_from_null                                   2.068 ms [PASS]
+Running: farray_init_from_existing                               2.120 ms [PASS]
+Running: farray_get_capacity                                     2.563 ms [PASS]
+Running: farray_clear                                            2.342 ms [PASS]
 Running: farray_set_value                        
   - 	Stored value at index 0: exp: 1  act: 1
   - 	Stored value at index 1: exp: 2  act: 2
@@ -12,7 +12,7 @@ Running: farray_set_value
   - 	Stored value at index 3: exp: 4  act: 4
   - 	Stored value at index 4: exp: 5  act: 5
 
-                                                                10.548 ms [PASS]
+                                                                10.688 ms [PASS]
 Running: farray_get_value                        
   - 	Retrieved value at index 0: exp: 10  act: 10
   - 	Retrieved value at index 1: exp: 20  act: 20
@@ -20,12 +20,12 @@ Running: farray_get_value
   - 	Retrieved value at index 3: exp: 40  act: 40
   - 	Retrieved value at index 4: exp: 50  act: 50
 
-                                                                 9.910 ms [PASS]
-Running: farray_remove_at                                        2.321 ms [PASS]
-Running: farray_as_collection                                    2.263 ms [PASS]
-Running: farray_to_collection                                    2.179 ms [PASS]
-Running: farray_set_out_of_bounds                                1.788 ms [PASS]
-Running: farray_get_out_of_bounds                                2.083 ms [PASS]
-Running: farray_remove_out_of_bounds                             1.746 ms [PASS]
+                                                                11.350 ms [PASS]
+Running: farray_remove_at                                        2.154 ms [PASS]
+Running: farray_as_collection                                    2.254 ms [PASS]
+Running: farray_to_collection                                    2.183 ms [PASS]
+Running: farray_set_out_of_bounds                                1.769 ms [PASS]
+Running: farray_get_out_of_bounds                                1.639 ms [PASS]
+Running: farray_remove_out_of_bounds                             1.606 ms [PASS]
 ================================================================================
 [2]     TESTS= 13        PASS= 13        FAIL=  0        SKIP=  0
