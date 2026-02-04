@@ -1,0 +1,20 @@
+[2] core_indexarray_set       :   16 : 2026-02-04  09:40:29                     
+================================================================================
+Running: indexarray_creation                                     5.263 ms [PASS]
+Running: indexarray_dispose                                      2.930 ms [PASS]
+Running: indexarray_add_value                                    3.320 ms [PASS]
+Running: indexarray_get_at                                       2.487 ms [PASS]
+Running: indexarray_remove_at                                    2.512 ms [PASS]
+Running: indexarray_is_empty_slot                                2.865 ms [PASS]
+Running: indexarray_capacity                                     2.273 ms [PASS]
+Running: indexarray_clear                                        2.863 ms [PASS]
+Running: indexarray_slot_reuse                                   2.780 ms [PASS]
+Running: indexarray_growth                                       3.158 ms [PASS]
+Running: indexarray_from_farray                                  4.544 ms [PASS]
+Running: indexarray_from_buffer                                  2.978 ms [PASS]
+Running: indexarray_create_iterator                              2.604 ms [PASS]
+Running: indexarray_iterator_empty                               3.098 ms [PASS]
+Running: indexarray_iterator_sparse                              3.739 ms [PASS]
+Running: indexarray_iterator_full                                3.532 ms [PASS]
+================================================================================
+[2]     TESTS= 16        PASS= 16        FAIL=  0        SKIP=  0

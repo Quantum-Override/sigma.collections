@@ -48,6 +48,22 @@ object iter_current(iterator it);
 void iter_reset(iterator it);
 void iter_dispose(iterator it);
 
+/* Sparse Iterator functions */
+bool sparse_iter_next(sparse_iterator it);
+usize sparse_iter_current_index(sparse_iterator it);
+int sparse_iter_current_value(sparse_iterator it, object *out_value);
+void sparse_iter_reset(sparse_iterator it);
+void sparse_iter_dispose(sparse_iterator it);
+
+/* Sparse iterator struct */
+struct sparse_iterator_s {
+    object sparse_coll;      // The sparse collection (slotarray or indexarray)
+    const sc_sparse_i *ops;  // Operations interface
+    usize current;           // Current index (-1 means before start, need to find first)
+    usize capacity;          // Cached capacity
+    bool positioned;         // Whether iterator is positioned at a valid slot
+};
+
 // create a collection view of array data
 collection collection_create_view(void *array, usize stride, usize length, bool owns_buffer) {
     struct sc_collection *coll = Allocator.alloc(sizeof(struct sc_collection));
@@ -307,4 +323,91 @@ const sc_iterator_i Iterator = {
     .current = iter_current,
     .reset = iter_reset,
     .dispose = iter_dispose,
+};
+
+/* Sparse Iterator Implementation */
+
+// Create a new sparse iterator
+sparse_iterator sparse_iterator_new(object sparse_coll, const sc_sparse_i *ops) {
+    if (!sparse_coll || !ops) {
+        return NULL;
+    }
+
+    sparse_iterator it = Allocator.alloc(sizeof(struct sparse_iterator_s));
+    if (!it) {
+        return NULL;
+    }
+
+    it->sparse_coll = sparse_coll;
+    it->ops = ops;
+    it->current = 0;
+    it->capacity = ops->capacity(sparse_coll);
+    it->positioned = false;  // Not yet positioned at first element
+
+    return it;
+}
+
+// Advance to next occupied slot
+bool sparse_iter_next(sparse_iterator it) {
+    if (!it || !it->ops) {
+        return false;
+    }
+
+    // If we were positioned at a slot, move past it
+    if (it->positioned) {
+        it->current++;
+        it->positioned = false;
+    }
+
+    // Search for next non-empty slot
+    while (it->current < it->capacity) {
+        if (!it->ops->is_empty_slot(it->sparse_coll, it->current)) {
+            it->positioned = true;
+            return true;  // Found occupied slot
+        }
+        it->current++;
+    }
+
+    return false;  // No more occupied slots
+}
+
+// Get current slot index
+usize sparse_iter_current_index(sparse_iterator it) {
+    if (!it) {
+        return 0;
+    }
+    return it->current;
+}
+
+// Get current value
+int sparse_iter_current_value(sparse_iterator it, object *out_value) {
+    if (!it || !out_value || !it->ops || !it->positioned) {
+        return ERR;
+    }
+
+    return it->ops->get_at(it->sparse_coll, it->current, out_value);
+}
+
+// Reset iterator to beginning
+void sparse_iter_reset(sparse_iterator it) {
+    if (it) {
+        it->current = 0;
+        it->positioned = false;
+    }
+}
+
+// Dispose iterator
+void sparse_iter_dispose(sparse_iterator it) {
+    if (it) {
+        Allocator.dispose(it);
+    }
+}
+
+// Sparse iterator interface
+const sc_sparse_iterator_i SparseIterator = {
+    .next = sparse_iter_next,
+    .current_index = sparse_iter_current_index,
+    .current_value = sparse_iter_current_value,
+    .reset = sparse_iter_reset,
+    .dispose = sparse_iter_dispose,
 };
