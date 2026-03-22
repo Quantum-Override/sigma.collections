@@ -9,6 +9,7 @@ Comprehensive guide to using the sigma.collections library for efficient data st
 - [Sparse Collections](#sparse-collections)
 - [Iterators](#iterators)
 - [Buffer Management](#buffer-management)
+- [Custom Allocation](#custom-allocation)
 - [Performance Considerations](#performance-considerations)
 - [Best Practices](#best-practices)
 
@@ -362,6 +363,195 @@ collection coll = FArray.as_collection(fa, sizeof(int));
 indexarray ia = IndexArray.from_farray(fa, sizeof(int));
 // ia is independent - owns its own buffer
 ```
+
+## Custom Allocation
+
+Starting with v0.2.0, sigma.collections supports custom allocation through the `alloc_use` pattern. This allows you to:
+- Route allocations through tracking/debugging allocators
+- Use custom memory pools or arenas
+- Integrate with testing frameworks for leak detection
+- Implement domain-specific allocation strategies
+
+### Default Behavior
+
+By default, all collections use standard `malloc`/`free`:
+
+```c
+// Uses malloc/free internally
+indexarray ia = IndexArray.new(100, sizeof(my_struct));
+IndexArray.dispose(ia);  // Calls free internally
+```
+
+This requires no setup and works without any dependencies beyond libc.
+
+### Setting Custom Allocator
+
+Wire in a custom allocator using the `alloc_use` function on any collection interface:
+
+```c
+#include <sigma.core/allocator.h>
+
+// Define your allocator callbacks
+void *my_alloc(usize size) {
+    void *ptr = malloc(size);
+    log_allocation(ptr, size);
+    return ptr;
+}
+
+void my_free(void *ptr) {
+    log_deallocation(ptr);
+    free(ptr);
+}
+
+void *my_realloc(void *ptr, usize size) {
+    void *new_ptr = realloc(ptr, size);
+    log_reallocation(ptr, new_ptr, size);
+    return new_ptr;
+}
+
+// Set up the allocator struct
+sc_alloc_use_t my_allocator = {
+    .alloc = my_alloc,
+    .release = my_free,
+    .resize = my_realloc
+};
+
+// Wire into collections (one-time module-level call)
+Collections.alloc_use(&my_allocator);
+
+// Now all collection allocations use your callbacks
+indexarray ia = IndexArray.new(100, sizeof(int));  // Calls my_alloc
+IndexArray.dispose(ia);                             // Calls my_free
+```
+
+### Per-Collection Type
+
+Each collection interface has its own `alloc_use` setter, but all share the same module-level hook:
+
+```c
+// All of these set the same module-level allocator
+Collections.alloc_use(&my_allocator);
+FArray.alloc_use(&my_allocator);
+List.alloc_use(&my_allocator);
+SlotArray.alloc_use(&my_allocator);
+IndexArray.alloc_use(&my_allocator);
+PArray.alloc_use(&my_allocator);
+
+// Typically just use Collections.alloc_use() - it affects all types
+```
+
+### Integration with sigma.test
+
+The primary use case is integration with the sigma.test framework for leak detection:
+
+```c
+#include <sigtest/sigtest.h>
+
+static void register_myapp_tests(void) {
+    // Wire collections into test framework allocator
+    Collections.alloc_use(sigtest_alloc_use());
+    
+    testset("myapp_tests", setup_fn, teardown_fn);
+    testcase("test_creates_indexarray", test_indexarray_lifecycle);
+    testcase("test_list_operations", test_list_ops);
+}
+
+static void test_indexarray_lifecycle(void) {
+    // All allocations tracked by sigma.test
+    indexarray ia = IndexArray.new(100, sizeof(int));
+    
+    // ... perform operations ...
+    
+    IndexArray.dispose(ia);
+    
+    // Test framework will report:
+    // "Total mallocs: 1"
+    // "Total frees: 1"
+    // Leak detection happens automatically
+}
+```
+
+### Resetting to Default
+
+Pass `NULL` to restore default `malloc`/`free` behavior:
+
+```c
+Collections.alloc_use(NULL);  // Back to malloc/free
+
+indexarray ia = IndexArray.new(100, sizeof(int));  // Uses malloc again
+```
+
+### Implementation Details
+
+The `alloc_use` pattern uses module-level dispatch:
+
+1. All collection types share a single `sc_alloc_use_t *` hook
+2. Internal helpers (`coll_alloc`, `coll_free`, `coll_realloc`) check the hook:
+   - If hook is NULL → call `malloc`/`free`/`realloc` directly
+   - If hook is set → call hook's function pointers
+3. No overhead when using default allocation (direct to libc)
+
+### Migration from Allocator Facade
+
+Prior to v0.2.0, collections used the deprecated `Allocator` facade from sigma.core. This has been removed:
+
+**Old pattern (< v0.2.0)**:
+```c
+#include <sigma.core/alloc.h>
+
+// Allocator facade was global and mandatory
+indexarray ia = IndexArray.new(100, sizeof(int));
+```
+
+**New pattern (>= v0.2.0)**:
+```c
+// No change needed - malloc/free is the new default
+indexarray ia = IndexArray.new(100, sizeof(int));
+
+// Or wire in custom allocator if needed
+Collections.alloc_use(&my_allocator);
+```
+
+**Breaking change**: If your code included `<sigma.core/alloc.h>` directly, remove it. The collections headers now include `<sigma.core/allocator.h>` for the `sc_alloc_use_t` type definition only.
+
+### Best Practices
+
+**Set allocator once at startup**:
+```c
+int main(void) {
+    // One-time setup
+    Collections.alloc_use(my_allocator_provider());
+    
+    // Rest of application...
+    return 0;
+}
+```
+
+**For testing, set per test set**:
+```c
+static void register_tests(void) {
+    Collections.alloc_use(sigtest_alloc_use());
+    testset("my_tests", NULL, NULL);
+    // All tests in this set tracked
+}
+```
+
+**Don't mix allocators**:
+```c
+// BAD: Switching allocators mid-lifecycle
+Collections.alloc_use(&allocator_a);
+indexarray ia = IndexArray.new(100, sizeof(int));  // Uses allocator_a
+
+Collections.alloc_use(&allocator_b);
+IndexArray.dispose(ia);  // Uses allocator_b - MISMATCH!
+
+// GOOD: Consistent allocator for object lifetime
+Collections.alloc_use(&allocator_a);
+indexarray ia = IndexArray.new(100, sizeof(int));
+IndexArray.dispose(ia);  // Both use allocator_a
+```
+
+**Thread safety**: The module-level hook is not thread-safe. Set it once before spawning threads, or use thread-local storage for per-thread allocators.
 
 ## Performance Considerations
 

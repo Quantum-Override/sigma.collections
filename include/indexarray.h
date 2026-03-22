@@ -32,6 +32,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include "collection.h"
 #include "farray.h"
 
@@ -137,6 +138,11 @@ typedef struct sc_indexarray_i {
      * @return New sparse iterator, or NULL on failure
      */
     sparse_iterator (*create_iterator)(indexarray ia);
+    /**
+     * @brief Configure the allocator used by IndexArray operations.
+     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free fallback
+     */
+    void (*alloc_use)(sc_alloc_use_t *use);
 } sc_indexarray_i;
 
 extern const sc_indexarray_i IndexArray;

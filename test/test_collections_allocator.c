@@ -5,11 +5,11 @@
 
 // #define SIGMA_MEMORY_AVAILABLE
 
-#include <sigma.core/alloc.h>
 #include <sigtest/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "farray.h"
 #include "list.h"
 
 //  configure test set

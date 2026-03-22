@@ -37,7 +37,6 @@
 #include "internal/arrays.h"
 #include "internal/collections.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -92,9 +91,9 @@ static void farray_init(farray *arr, usize capacity, usize stride) {
         // what to do about an farray that's already initialized?
         // for now, we just reallocate the bucket
         if ((*arr)->bucket) {
-            Allocator.dispose((*arr)->bucket);
+            coll_free((*arr)->bucket);
         }
-        (*arr)->bucket = Allocator.alloc(stride * capacity);
+        (*arr)->bucket = coll_alloc(stride * capacity);
         if (!(*arr)->bucket) {
             // allocation ERRed, handle error as needed
             return;
@@ -187,4 +186,5 @@ const sc_farray_i FArray = {
     .remove = farray_remove_at,
     .as_collection = farray_as_collection,
     .to_collection = farray_to_collection,
+    .alloc_use = coll_set_alloc_use,
 };

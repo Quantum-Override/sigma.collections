@@ -26,8 +26,8 @@
  */
 
 #include "indexarray.h"
-#include <sigma.core/alloc.h>
 #include <string.h>
+#include "internal/arrays.h"
 #include "internal/collections.h"
 
 // IndexArray struct: uses collection internally
@@ -72,7 +72,7 @@ static indexarray indexarray_new(usize capacity, usize stride) {
         goto exit;
     }
 
-    ia = Allocator.alloc(sizeof(struct sc_indexarray));
+    ia = coll_alloc(sizeof(struct sc_indexarray));
     if (!ia) {
         goto exit;
     }
@@ -93,7 +93,7 @@ static indexarray indexarray_new(usize capacity, usize stride) {
     return ia;
 
 cleanup:
-    Allocator.dispose(ia);
+    coll_free(ia);
     ia = NULL;
 
 exit:
@@ -106,7 +106,7 @@ static void indexarray_dispose(indexarray ia) {
         return;
     }
     collection_dispose(ia->coll);
-    Allocator.dispose(ia);
+    coll_free(ia);
 }
 
 // Add a value to the indexarray
@@ -209,7 +209,7 @@ static indexarray indexarray_from_farray(farray arr, usize stride) {
 
     // Copy non-empty elements
     for (usize i = 0; i < cap; i++) {
-        void *value = Allocator.alloc(stride);
+        void *value = coll_alloc(stride);
         if (!value) {
             IndexArray.dispose(ia);
             return NULL;
@@ -220,7 +220,7 @@ static indexarray indexarray_from_farray(farray arr, usize stride) {
                 IndexArray.add(ia, value);
             }
         }
-        Allocator.dispose(value);
+        coll_free(value);
     }
 
     return ia;
@@ -234,13 +234,13 @@ static indexarray indexarray_from_buffer(void *buffer, void *end, usize stride) 
         goto exit;
     }
 
-    ia = Allocator.alloc(sizeof(struct sc_indexarray));
+    ia = coll_alloc(sizeof(struct sc_indexarray));
     if (!ia) {
         goto exit;
     }
 
     // Create a non-owning collection view of the buffer
-    ia->coll = Allocator.alloc(sizeof(struct sc_collection));
+    ia->coll = coll_alloc(sizeof(struct sc_collection));
     if (!ia->coll) {
         goto cleanup;
     }
@@ -257,7 +257,7 @@ static indexarray indexarray_from_buffer(void *buffer, void *end, usize stride) 
     return ia;
 
 cleanup:
-    Allocator.dispose(ia);
+    coll_free(ia);
     ia = NULL;
 
 exit:
@@ -350,4 +350,5 @@ const sc_indexarray_i IndexArray = {
     .stride = indexarray_stride,
     .clear = indexarray_clear,
     .create_iterator = indexarray_create_iterator,
+    .alloc_use = coll_set_alloc_use,
 };

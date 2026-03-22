@@ -39,6 +39,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
 #include "collection.h"
 
@@ -120,5 +121,10 @@ typedef struct sc_farray_i {
      * @return A collection copy, or NULL on failure
      */
     collection (*to_collection)(farray, usize);
+    /**
+     * @brief Configure the allocator used by FArray operations.
+     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free fallback
+     */
+    void (*alloc_use)(sc_alloc_use_t *use);
 } sc_farray_i;
 extern const sc_farray_i FArray;

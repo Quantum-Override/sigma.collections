@@ -32,7 +32,6 @@
 #include "internal/arrays.h"
 #include "internal/collections.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include "internal/array_base.h"
@@ -66,7 +65,7 @@ struct sparse_iterator_s {
 
 // create a collection view of array data
 collection collection_create_view(void *array, usize stride, usize length, bool owns_buffer) {
-    struct sc_collection *coll = Allocator.alloc(sizeof(struct sc_collection));
+    struct sc_collection *coll = coll_alloc(sizeof(struct sc_collection));
     if (!coll) {
         return NULL;
     }
@@ -166,9 +165,9 @@ void collection_dispose(collection coll) {
     }
 
     if (coll->owns_buffer && coll->array.bucket) {
-        Allocator.dispose(coll->array.bucket);
+        coll_free(coll->array.bucket);
     }
-    Allocator.dispose(coll);
+    coll_free(coll);
 }
 // get the Collections library version string
 const char *collection_get_version(void) { return COLLECTIONS_VERSION; }
@@ -191,13 +190,13 @@ int collection_grow(collection coll) {
     } else {
         new_capacity = current_capacity * 2;
     }
-    void *new_buffer = Allocator.alloc(coll->stride * new_capacity);
+    void *new_buffer = coll_alloc(coll->stride * new_capacity);
     if (!new_buffer) {
         return ERR;
     }
 
     memcpy(new_buffer, coll->array.bucket, coll->stride * current_capacity);
-    Allocator.dispose(coll->array.bucket);
+    coll_free(coll->array.bucket);
     coll->array.bucket = new_buffer;
     coll->array.end = (char *)new_buffer + coll->stride * new_capacity;
     return OK;
@@ -276,7 +275,7 @@ usize collection_get_count(collection coll) { return collection_count(coll); }
 /* Create an iterator for a collection */
 iterator collection_create_iterator(collection coll) {
     if (!coll) return NULL;
-    iterator it = Allocator.alloc(sizeof(struct iterator_s));
+    iterator it = coll_alloc(sizeof(struct iterator_s));
     if (!it) return NULL;
     it->coll = coll;
     it->current = 0;
@@ -293,6 +292,7 @@ const sc_collections_i Collections = {
     .create_view = collection_create_view,
     .dispose = collection_dispose,
     .version = collection_get_version,
+    .alloc_use = coll_set_alloc_use,
 };
 
 /* Advances to next item and returns true if there is one */
@@ -315,7 +315,7 @@ void iter_reset(iterator it) {
 
 /* Disposes the iterator */
 void iter_dispose(iterator it) {
-    if (it) Allocator.dispose(it);
+    if (it) coll_free(it);
 }
 
 const sc_iterator_i Iterator = {
@@ -333,7 +333,7 @@ sparse_iterator sparse_iterator_new(object sparse_coll, const sc_sparse_i *ops) 
         return NULL;
     }
 
-    sparse_iterator it = Allocator.alloc(sizeof(struct sparse_iterator_s));
+    sparse_iterator it = coll_alloc(sizeof(struct sparse_iterator_s));
     if (!it) {
         return NULL;
     }
@@ -399,7 +399,7 @@ void sparse_iter_reset(sparse_iterator it) {
 // Dispose iterator
 void sparse_iter_dispose(sparse_iterator it) {
     if (it) {
-        Allocator.dispose(it);
+        coll_free(it);
     }
 }
 

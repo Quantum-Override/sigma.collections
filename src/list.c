@@ -31,9 +31,9 @@
 
 #include "list.h"
 #include "collections.h"
+#include "internal/arrays.h"
 #include "internal/collections.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -45,7 +45,7 @@ struct sc_list {
 //  create new list with specified initial capacity and stride
 static list list_new(usize capacity, usize stride) {
     //  allocate memory for the list structure
-    struct sc_list *lst = Allocator.alloc(sizeof(struct sc_list));
+    struct sc_list *lst = coll_alloc(sizeof(struct sc_list));
     if (!lst) {
         return NULL;  // allocation ERRed
     }
@@ -53,7 +53,7 @@ static list list_new(usize capacity, usize stride) {
     //  create the underlying collection with the specified stride
     lst->coll = collection_new(capacity, stride);
     if (!lst->coll) {
-        Allocator.dispose(lst);
+        coll_free(lst);
         return NULL;  // allocation ERRed
     }
 
@@ -72,7 +72,7 @@ static void list_dispose(list lst) {
     collection_dispose(lst->coll);
 
     //  free the list structure itself
-    Allocator.dispose(lst);
+    coll_free(lst);
 }
 
 //  get the current capacity of the list
@@ -204,4 +204,5 @@ const sc_list_i List = {
     .insert = list_insert_at,
     .prepend = list_prepend,
     .clear = list_clear,
+    .alloc_use = coll_set_alloc_use,
 };

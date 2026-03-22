@@ -2,6 +2,9 @@
 
 High-performance C collection library providing unified interfaces for array-based data structures with support for both dense and sparse collections.
 
+**Version**: 0.2.0 (RC)  
+**License**: BSD-3-Clause
+
 ## Features
 
 - **Dense Collections**: FArray, PArray, List
@@ -10,6 +13,8 @@ High-performance C collection library providing unified interfaces for array-bas
 - **Dynamic Growth**: Automatic resizing for List and IndexArray
 - **Buffer Views**: Non-owning views from pre-allocated memory
 - **Memory Efficient**: Cache-friendly contiguous layouts
+- **Custom Allocation**: `alloc_use` hook for custom allocators (v0.2.0+)
+- **Testing Integration**: Native support for sigma.test leak detection
 
 ## Quick Start
 
@@ -68,10 +73,35 @@ IndexArray.dispose(ia);  // View disposed, buffer remains valid
 free(buffer);
 ```
 
+### Custom Allocation (v0.2.0+)
+
+Wire in custom allocators for testing or specialized memory management:
+
+```c
+#include <sigtest/sigtest.h>
+
+static void register_tests(void) {
+    // Track all collection allocations
+    Collections.alloc_use(sigtest_alloc_use());
+    
+    testset("my_tests", NULL, NULL);
+    testcase("test_no_leaks", test_lifecycle);
+}
+
+static void test_lifecycle(void) {
+    indexarray ia = IndexArray.new(100, sizeof(int));
+    IndexArray.dispose(ia);
+    // Test framework reports: Total mallocs: 1, Total frees: 1
+}
+```
+
+See [User Guide - Custom Allocation](docs/USERS_GUIDE.md#custom-allocation) for details.
+
 ## Documentation
 
 - **[User Guide](docs/USERS_GUIDE.md)** - Detailed usage patterns and examples
 - **[API Reference](docs/API_REFERENCE.md)** - Complete function reference
+- **[Migration Guide v0.2.0](docs/MIGRATION_v0.2.0.md)** - Upgrading from v0.1.x
 
 ## Testing
 

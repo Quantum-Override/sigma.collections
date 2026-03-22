@@ -11,7 +11,7 @@ Use TDD (Test-Driven Development) for all feature implementations:
 3. Implement a passing function to satisfy the test
 4. Move on to the next test
 
-**Gateway**: when working with allocations, always use `--valgrind` in the `ctest` command to ensure we have not started leaking memory.
+**Gateway**: when working with allocations, always use `--valgrind` in the `./rtest` command to ensure we have not started leaking memory.
 
 If resolving a bug in a complex function, atomize the function to allow for micro-testing the individual concerns. Then, provide invariants to stress the solution and poke it for weaknesses.
 
@@ -88,7 +88,7 @@ void test_example(void) {
 // Logs: logs/test_*.log
 
 // execute tests
-ctest memory // to execute test runner on "test_memory.c"
+./rtest unit/memory // to execute test runner on "test_memory.c"
 ```
 
 ## Code Organization

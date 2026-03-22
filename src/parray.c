@@ -36,7 +36,6 @@
 #include "internal/arrays.h"
 #include "internal/collections.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -91,9 +90,9 @@ static void parray_init(parray *arr, usize capacity) {
         // what to do about an array that's already initialized?
         // for now, we just reallocate the bucket
         if ((*arr)->bucket) {
-            Allocator.dispose((*arr)->bucket);
+            coll_free((*arr)->bucket);
         }
-        (*arr)->bucket = Allocator.alloc(sizeof(addr) * capacity);
+        (*arr)->bucket = coll_alloc(sizeof(addr) * capacity);
         if (!(*arr)->bucket) {
             // allocation ERRed, handle error as needed
             return;
@@ -212,4 +211,5 @@ const sc_parray_i PArray = {
     .as_collection = parray_as_collection,
     .to_collection = parray_to_collection,
     .as_slotarray = parray_as_slotarray,
+    .alloc_use = coll_set_alloc_use,
 };

@@ -153,6 +153,27 @@ Create non-owning collection view.
 
 ---
 
+#### `FArray.alloc_use`
+```c
+void FArray.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**:
+- Sets module-level allocator affecting all collection types
+- See [Custom Allocation](#custom-allocation) section for details
+- Pass NULL to restore default malloc/free behavior
+
+**Example**:
+```c
+Collections.alloc_use(sigtest_alloc_use());  // Route to test framework
+```
+
+---
+
 ## PArray
 
 **Header**: `<sigma.collections/parray.h>`
@@ -229,6 +250,19 @@ slotarray PArray.as_slotarray(parray arr);
 Create non-owning slotarray view.
 
 **Returns**: SlotArray view or NULL on failure
+
+---
+
+#### `PArray.alloc_use`
+```c
+void PArray.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**: Sets module-level allocator shared by all collection types.
 
 ---
 
@@ -322,6 +356,19 @@ usize List.capacity(list lst);
 Get current capacity.
 
 **Returns**: Capacity
+
+---
+
+#### `List.alloc_use`
+```c
+void List.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**: Sets module-level allocator shared by all collection types.
 
 ---
 
@@ -432,6 +479,19 @@ sparse_iterator SlotArray.create_iterator(slotarray sa);
 Create sparse iterator.
 
 **Returns**: Iterator or NULL on failure
+
+---
+
+#### `SlotArray.alloc_use`
+```c
+void SlotArray.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**: Sets module-level allocator shared by all collection types.
 
 ---
 
@@ -587,6 +647,19 @@ Create sparse iterator.
 
 ---
 
+#### `IndexArray.alloc_use`
+```c
+void IndexArray.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**: Sets module-level allocator shared by all collection types.
+
+---
+
 ## Iterator
 
 **Header**: `<sigma.collections/collections.h>`
@@ -732,6 +805,35 @@ Clear collection.
 void Collections.dispose(collection coll);
 ```
 Dispose of collection.
+
+---
+
+#### `Collections.alloc_use`
+```c
+void Collections.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections module-wide.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**:
+- Sets module-level allocator affecting all collection types
+- Pass NULL to restore default malloc/free behavior
+- Typically called once at application startup or test setup
+- Not thread-safe - set before spawning threads
+
+**Example**:
+```c
+// For testing with leak detection
+Collections.alloc_use(sigtest_alloc_use());
+
+// For custom memory pool
+Collections.alloc_use(&my_allocator);
+
+// Restore default malloc/free
+Collections.alloc_use(NULL);
+```
 
 ---
 
