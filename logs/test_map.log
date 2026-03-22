@@ -1,0 +1,20 @@
+[2] core_map_set              :   16 : 2026-03-21  23:34:10                     
+================================================================================
+Running: map_new_dispose                                         5.952 ms [PASS]
+Running: map_set_get_single                                      3.171 ms [PASS]
+Running: map_set_multiple                                        2.890 ms [PASS]
+Running: map_update_existing_key                                 2.529 ms [PASS]
+Running: map_get_nonexistent                                     2.135 ms [PASS]
+Running: map_has                                                 2.498 ms [PASS]
+Running: map_remove                                              2.519 ms [PASS]
+Running: map_remove_nonexistent                                  2.108 ms [PASS]
+Running: map_remove_and_reinsert                                 2.500 ms [PASS]
+Running: map_automatic_resize                                    9.975 ms [PASS]
+Running: map_large_insertion                                    71.545 ms [PASS]
+Running: map_empty_key                                           2.652 ms [PASS]
+Running: map_key_with_nulls                                      2.258 ms [PASS]
+Running: map_collision_handling                                  4.857 ms [PASS]
+Running: map_null_safety                                         2.322 ms [PASS]
+Running: map_arena_pattern                                       3.154 ms [PASS]
+================================================================================
+[2]     TESTS= 16        PASS= 16        FAIL=  0        SKIP=  0
