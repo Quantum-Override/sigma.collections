@@ -33,6 +33,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include "farray.h"
 struct sc_slotarray;
 typedef struct sc_slotarray *slotarray;
@@ -108,5 +109,10 @@ typedef struct sc_slotarray_i {
      * @return New sparse iterator, or NULL on failure
      */
     sparse_iterator (*create_iterator)(slotarray);
+    /**
+     * @brief Configure the allocator used by SlotArray operations.
+     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free fallback
+     */
+    void (*alloc_use)(sc_alloc_use_t *use);
 } sc_slotarray_i;
 extern const sc_slotarray_i SlotArray;

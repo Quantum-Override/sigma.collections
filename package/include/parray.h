@@ -40,6 +40,7 @@
 
 #include "collection.h"
 // ----------------
+#include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
 
 // forward declaration of the array structure
@@ -121,5 +122,10 @@ typedef struct sc_parray_i {
      * @return A slotarray view, or NULL on failure
      */
     slotarray (*as_slotarray)(parray);
+    /**
+     * @brief Configure the allocator used by PArray operations.
+     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free fallback
+     */
+    void (*alloc_use)(sc_alloc_use_t *use);
 } sc_parray_i;
 extern const sc_parray_i PArray;

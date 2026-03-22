@@ -37,7 +37,7 @@ TST_BUILD_DIR="$BUILD_DIR/test"
 
 # Bundle definitions:
 declare -A PACKAGES=(
-    ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray indexarray"
+    ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray indexarray map"
 )
 
 # Build target definitions:

@@ -26,6 +26,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
 #include "collection.h"
 #include "farray.h"
@@ -40,5 +41,13 @@ object array_alloc_bucket(size_t element_size, usize capacity);
 void array_free_resources(void *bucket, void *struct_ptr);
 void *array_alloc_struct_with_bucket(usize struct_size, char handle_char, usize element_size,
                                      usize capacity, void **bucket_out, char **end_out);
+
+// Allocator dispatch helpers (exported for all collection modules)
+void *coll_alloc(usize size);
+void coll_free(void *ptr);
+void *coll_realloc(void *ptr, usize size);
+
+// Allocator hook setter
+void coll_set_alloc_use(sc_alloc_use_t *use);
 
 // Common collection interface helpers
