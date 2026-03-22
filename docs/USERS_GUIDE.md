@@ -7,6 +7,7 @@ Comprehensive guide to using the sigma.collections library for efficient data st
 - [Overview](#overview)
 - [Dense Collections](#dense-collections)
 - [Sparse Collections](#sparse-collections)
+- [Hash Map](#hash-map)
 - [Iterators](#iterators)
 - [Buffer Management](#buffer-management)
 - [Custom Allocation](#custom-allocation)
@@ -226,6 +227,96 @@ IndexArray.dispose(ia);
 - ✅ No manual memory management for elements
 - ❌ Empty slots use memory
 - ❌ Zero-byte pattern determines "empty"
+
+## Hash Map
+
+### Map - String-Keyed Hash Map
+
+**When to use**: Fast key-value lookups with string keys.
+
+```c
+#include <sigma.collections/map.h>
+
+// Create map with initial capacity
+map m = Map.new(16);
+
+// Store key-value pairs (keys are caller-owned)
+const char *key1 = "username";
+Map.set(m, key1, strlen(key1), (usize)user_ptr);
+
+// Numeric values work too
+Map.set(m, "user_id", 7, 12345);
+
+// Retrieve value
+usize value;
+if (Map.get(m, "username", 8, &value)) {
+    user_t *user = (user_t *)value;
+    // use user...
+}
+
+// Check existence
+if (Map.has(m, "user_id", 7)) {
+    // key exists
+}
+
+// Remove entry
+Map.remove(m, "username", 8);
+
+// Get statistics
+usize count = Map.count(m);      // Number of entries
+usize capacity = Map.capacity(m); // Bucket capacity
+
+// Iterate over entries
+sparse_iterator it = Map.create_iterator(m);
+while (SparseIterator.next(it)) {
+    map_entry *entry;
+    SparseIterator.current_value(it, (object *)&entry);
+    printf("Key: %.*s, Value: %zu\n", 
+           (int)entry->key_len, entry->key, entry->value);
+}
+SparseIterator.dispose(it);
+
+// Cleanup (doesn't free keys or values)
+Map.dispose(m);
+```
+
+**Arena Pattern** (recommended for performance):
+```c
+// Keys allocated from arena - map stores pointers
+char arena[4096];
+usize arena_offset = 0;
+
+map m = Map.new(32);
+
+// "Allocate" key in arena
+const char *key = arena + arena_offset;
+strcpy(arena + arena_offset, "field_name");
+arena_offset += strlen("field_name") + 1;
+
+// Map stores pointer to arena memory
+Map.set(m, key, strlen(key), value);
+
+// Map disposed, arena outlives it - no key copying overhead
+Map.dispose(m);
+```
+
+**Implementation Details**:
+- **Hash Algorithm**: FNV-1a 64-bit (fast, good distribution)
+- **Collision Resolution**: Open addressing with linear probing
+- **Load Factor**: Auto-resize at 50% capacity
+- **Key Storage**: Pointer-based (caller owns keys)
+- **Tombstones**: Removed entries marked but not reclaimed until resize
+
+**Trade-offs**:
+- ✅ O(1) average lookup, insert, remove
+- ✅ No key copying (arena-friendly)
+- ✅ Automatic growth at 50% load
+- ✅ Iterate over entries with sparse iterator
+- ✅ Keys can contain NULL bytes (binary keys)
+- ❌ Caller manages key lifetime
+- ❌ String keys only (binary-safe, but no integer keys)
+- ❌ Tombstones accumulate until resize
+- ❌ Memory not reclaimed on remove (only on resize)
 
 ## Iterators
 

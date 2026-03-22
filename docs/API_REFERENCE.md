@@ -9,6 +9,7 @@ Complete function reference for sigma.collections library.
 - [List](#list)
 - [SlotArray](#slotarray)
 - [IndexArray](#indexarray)
+- [Map](#map)
 - [Iterator](#iterator)
 - [SparseIterator](#sparseiterator)
 - [Collections](#collections)
@@ -650,6 +651,186 @@ Create sparse iterator.
 #### `IndexArray.alloc_use`
 ```c
 void IndexArray.alloc_use(sc_alloc_use_t *use);
+```
+Set custom allocator for all collections.
+
+**Parameters**:
+- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+
+**Notes**: Sets module-level allocator shared by all collection types.
+
+---
+
+## Map
+
+**Header**: `<sigma.collections/map.h>`
+
+String-keyed hash map with FNV-1a hashing and automatic resizing.
+
+### Functions
+
+#### `Map.new`
+```c
+map Map.new(usize capacity);
+```
+Create a new map with specified capacity.
+
+**Parameters**:
+- `capacity` - Initial number of buckets (rounded up to power of 2)
+
+**Returns**: New map or NULL on failure
+
+**Example**:
+```c
+map m = Map.new(16);
+```
+
+---
+
+#### `Map.init`
+```c
+void Map.init(map *m, usize capacity);
+```
+Initialize a map in-place.
+
+**Parameters**:
+- `m` - Pointer to map variable
+- `capacity` - Initial capacity
+
+---
+
+#### `Map.dispose`
+```c
+void Map.dispose(map m);
+```
+Dispose of map and free resources. Does not free keys or values (caller-owned).
+
+**Parameters**:
+- `m` - Map to dispose
+
+---
+
+#### `Map.set`
+```c
+int Map.set(map m, const char *key, usize key_len, usize value);
+```
+Set key-value pair. If key exists, updates value. Auto-resizes at 50% load.
+
+**Parameters**:
+- `m` - Map to modify
+- `key` - Pointer to key bytes (caller retains ownership)
+- `key_len` - Length of key in bytes
+- `value` - Value to store (usize, typically pointer or integer)
+
+**Returns**: 0 on success, -1 on error
+
+**Example**:
+```c
+Map.set(m, "name", 4, (usize)name_ptr);
+Map.set(m, "id", 2, 12345);
+```
+
+---
+
+#### `Map.get`
+```c
+bool Map.get(map m, const char *key, usize key_len, usize *out_value);
+```
+Retrieve value by key.
+
+**Parameters**:
+- `m` - Map to query
+- `key` - Key bytes to search for
+- `key_len` - Length of key
+- `out_value` - Pointer to store retrieved value
+
+**Returns**: true if found, false if not found
+
+**Example**:
+```c
+usize value;
+if (Map.get(m, "name", 4, &value)) {
+    char *name = (char *)value;
+}
+```
+
+---
+
+#### `Map.has`
+```c
+bool Map.has(map m, const char *key, usize key_len);
+```
+Check if key exists in map.
+
+**Parameters**:
+- `m` - Map to query
+- `key` - Key to search for
+- `key_len` - Length of key
+
+**Returns**: true if key exists, false otherwise
+
+---
+
+#### `Map.remove`
+```c
+bool Map.remove(map m, const char *key, usize key_len);
+```
+Remove key-value pair from map.
+
+**Parameters**:
+- `m` - Map to modify
+- `key` - Key to remove
+- `key_len` - Length of key
+
+**Returns**: true if removed, false if not found
+
+---
+
+#### `Map.count`
+```c
+usize Map.count(map m);
+```
+Get number of entries in map.
+
+**Returns**: Entry count or 0 on error
+
+---
+
+#### `Map.capacity`
+```c
+usize Map.capacity(map m);
+```
+Get bucket capacity.
+
+**Returns**: Capacity or 0 on error
+
+---
+
+#### `Map.create_iterator`
+```c
+sparse_iterator Map.create_iterator(map m);
+```
+Create sparse iterator for traversing map entries.
+
+**Returns**: Sparse iterator or NULL on error
+
+**Example**:
+```c
+sparse_iterator it = Map.create_iterator(m);
+while (SparseIterator.next(it)) {
+    map_entry *entry;
+    SparseIterator.current_value(it, (object *)&entry);
+    printf("Key: %.*s, Value: %zu\n", 
+           (int)entry->key_len, entry->key, entry->value);
+}
+SparseIterator.dispose(it);
+```
+
+---
+
+#### `Map.alloc_use`
+```c
+void Map.alloc_use(sc_alloc_use_t *use);
 ```
 Set custom allocator for all collections.
 

@@ -9,8 +9,9 @@ High-performance C collection library providing unified interfaces for array-bas
 
 - **Dense Collections**: FArray, PArray, List
 - **Sparse Collections**: SlotArray (pointer-based), IndexArray (value-based)
+- **Hash Map**: Map (string-keyed hash map with FNV-1a hashing)
 - **Iterators**: Standard Iterator and SparseIterator for unified traversal
-- **Dynamic Growth**: Automatic resizing for List and IndexArray
+- **Dynamic Growth**: Automatic resizing for List, IndexArray, and Map
 - **Buffer Views**: Non-owning views from pre-allocated memory
 - **Memory Efficient**: Cache-friendly contiguous layouts
 - **Custom Allocation**: `alloc_use` hook for custom allocators (v0.2.0+)
@@ -58,6 +59,40 @@ while (SparseIterator.next(it)) {
 }
 SparseIterator.dispose(it);
 IndexArray.dispose(ia);
+```
+
+### String-Keyed Hash Map
+
+```c
+#include <sigma.collections/map.h>
+
+// Create hash map
+map m = Map.new(16);
+
+// Set key-value pairs (keys are caller-owned)
+Map.set(m, "username", 8, (usize)user_ptr);
+Map.set(m, "user_id", 7, 12345);
+
+// Retrieve values
+usize value;
+if (Map.get(m, "username", 8, &value)) {
+    user_t *user = (user_t *)value;
+}
+
+// Check existence and remove
+if (Map.has(m, "user_id", 7)) {
+    Map.remove(m, "user_id", 7);
+}
+
+// Iterate over entries
+sparse_iterator it = Map.create_iterator(m);
+while (SparseIterator.next(it)) {
+    map_entry *entry;
+    SparseIterator.current_value(it, (object *)&entry);
+    // Access entry->key, entry->key_len, entry->value
+}
+SparseIterator.dispose(it);
+Map.dispose(m);
 ```
 
 ### Working with Pre-allocated Buffers
@@ -117,7 +152,7 @@ ctest indexarray
 ctest indexarray --valgrind
 ```
 
-**Test Coverage**: 17 SlotArray tests, 16 IndexArray tests - all passing
+**Test Coverage**: 102 total tests - 17 Map, 17 SlotArray, 16 IndexArray, 23 List, 13 FArray, 13 PArray, and more - all passing
 
 ## Directory Structure
 

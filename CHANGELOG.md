@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Direct `malloc`/`free` fallback when no custom allocator is set (zero overhead)
   - Enables seamless integration with sigma.test for leak detection
   - See [Custom Allocation](#custom-allocation) section in User Guide
+- **Map Collection**: New string-keyed hash map (FR-2603-sigma-collections-002)
+  - FNV-1a 64-bit hashing with open addressing and linear probing
+  - Automatic resize at 50% load factor for optimal performance
+  - Pointer-based key storage (caller-owned, arena-friendly)
+  - Binary-safe keys (supports NULL bytes in key data)
+  - O(1) average-case set/get/remove operations
+  - Sparse iterator support via `Map.create_iterator()`
+  - See [User Guide - Hash Map](docs/USERS_GUIDE.md#hash-map) for details
 
 ### Removed
 - **Breaking**: Removed dependency on `Allocator` facade from sigma.core
@@ -52,7 +60,7 @@ See [MIGRATION_v0.2.0.md](docs/MIGRATION_v0.2.0.md) for detailed upgrade instruc
 - Optionally use `Collections.alloc_use()` for custom allocation
 
 ### Testing
-- All 83 tests pass (17 slotarray, 16 indexarray, 23 list, 13 farray, 13 parray, 1 iterator, 2 allocator)
+- All 102 tests pass (17 map, 17 slotarray, 16 indexarray, 23 list, 13 farray, 13 parray, 1 iterator, 2 allocator)
 - Verified zero memory leaks with valgrind
 - Verified module builds cleanly without allocator dependency
 

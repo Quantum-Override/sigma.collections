@@ -4,14 +4,14 @@
  * QuantumOverride [Q|]
  * ----------------------------------------------
  * MIT License
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
  * ----------------------------------------------
@@ -20,8 +20,8 @@
  */
 #pragma once
 
-#include <sigma.core/types.h>
 #include <sigma.core/allocator.h>
+#include <sigma.core/types.h>
 
 /**
  * @brief Opaque map handle
@@ -30,8 +30,24 @@ struct sc_map_s;
 typedef struct sc_map_s *map;
 
 /**
+ * @brief Forward declaration for sparse iterator
+ */
+struct sparse_iterator_s;
+typedef struct sparse_iterator_s *sparse_iterator;
+
+/**
+ * @brief Map entry structure for iteration
+ * Returned by iterator to access key-value pairs
+ */
+typedef struct {
+    const char *key; /**< Key pointer */
+    usize key_len;   /**< Key length in bytes */
+    usize value;     /**< Stored value */
+} map_entry;
+
+/**
  * @brief Map interface for string-keyed hash map operations
- * 
+ *
  * Implementation details:
  * - FNV-1a 64-bit hashing
  * - Open addressing with linear probing
@@ -45,7 +61,7 @@ typedef struct sc_map_i {
      * @brief Create a new map with the given initial capacity
      * @param capacity Initial bucket count hint (rounded up to power of 2)
      * @return New map or NULL on allocation failure
-     * 
+     *
      * Example:
      * @code
      * map m = Map.new(32);  // Creates map with 32 buckets
@@ -57,7 +73,7 @@ typedef struct sc_map_i {
      * @brief Initialize an already-allocated map slot
      * @param m Pointer to map slot to initialize
      * @param capacity Initial bucket count hint
-     * 
+     *
      * Example:
      * @code
      * struct sc_map_s map_instance;
@@ -69,7 +85,7 @@ typedef struct sc_map_i {
     /**
      * @brief Dispose of map and free resources
      * @param m The map to dispose
-     * 
+     *
      * Note: Does NOT free keys or values - caller manages those lifetimes
      */
     void (*dispose)(map m);
@@ -81,13 +97,13 @@ typedef struct sc_map_i {
      * @param len Key length in bytes
      * @param val Value to store (pointer-sized, caller interprets)
      * @return 0 on success; -1 on allocation failure
-     * 
+     *
      * Behavior:
      * - If key exists: updates value
      * - If key doesn't exist: inserts new entry
      * - Automatically resizes at 50% load factor
      * - Key pointer must remain valid while entry exists
-     * 
+     *
      * Example:
      * @code
      * const char *key = "field_name";
@@ -103,7 +119,7 @@ typedef struct sc_map_i {
      * @param len Key length in bytes
      * @param out_val Receives the stored value on success
      * @return 1 if found (out_val written); 0 if not found
-     * 
+     *
      * Example:
      * @code
      * usize value;
@@ -120,7 +136,7 @@ typedef struct sc_map_i {
      * @param key Key bytes
      * @param len Key length in bytes
      * @return 1 if present; 0 if absent
-     * 
+     *
      * Example:
      * @code
      * if (Map.has(m, "key", 3)) {
@@ -136,9 +152,9 @@ typedef struct sc_map_i {
      * @param key Key bytes
      * @param len Key length in bytes
      * @return 1 if key was present and removed; 0 if key was absent
-     * 
+     *
      * Note: Does NOT free the key pointer - caller manages key lifetime
-     * 
+     *
      * Example:
      * @code
      * if (Map.remove(m, "old_key", 7)) {
@@ -165,23 +181,44 @@ typedef struct sc_map_i {
     /**
      * @brief Set custom allocator for map operations
      * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free
-     * 
+     *
      * Note: Sets module-level allocator affecting all map instances.
      * Typically called once at startup or test setup.
-     * 
+     *
      * Example:
      * @code
      * // For arena integration
      * Map.alloc_use(&arena_allocator);
-     * 
+     *
      * // For test framework
      * Map.alloc_use(sigtest_alloc_use());
-     * 
+     *
      * // Restore default
      * Map.alloc_use(NULL);
      * @endcode
      */
     void (*alloc_use)(sc_alloc_use_t *use);
+
+    /**
+     * @brief Create iterator for map entries
+     * @param m The map to iterate over
+     * @return Sparse iterator or NULL on failure
+     *
+     * Iterates only over occupied slots (skips empty and tombstones).
+     * Use SparseIterator interface to access entries.
+     *
+     * Example:
+     * @code
+     * sparse_iterator it = Map.create_iterator(m);
+     * while (SparseIterator.next(it)) {
+     *     map_entry *entry;
+     *     SparseIterator.current_value(it, (object *)&entry);
+     *     printf("%.*s => %zu\n", (int)entry->key_len, entry->key, entry->value);
+     * }
+     * SparseIterator.dispose(it);
+     * @endcode
+     */
+    sparse_iterator (*create_iterator)(map m);
 
 } sc_map_i;
 
