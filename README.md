@@ -134,6 +134,7 @@ See [User Guide - Custom Allocation](docs/USERS_GUIDE.md#custom-allocation) for 
 
 ## Documentation
 
+- **[Collections Overview](docs/COLLECTIONS_OVERVIEW.md)** - Quick reference for all collection types
 - **[User Guide](docs/USERS_GUIDE.md)** - Detailed usage patterns and examples
 - **[API Reference](docs/API_REFERENCE.md)** - Complete function reference
 - **[Migration Guide v0.2.0](docs/MIGRATION_v0.2.0.md)** - Upgrading from v0.1.x
