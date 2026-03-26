@@ -2,16 +2,18 @@
 
 ## Overview
 
-`sigma.arrays.a` is a **zero-dependency** array library providing flexible and pointer arrays using only standard C library (`malloc`/`free`/`memcpy`/`memset`). This is **NOT** for the Sigma.* ecosystem - if you're writing Sigma code, use `sigma.collections.o` instead.
+`sigma.arrays.a` is a **zero sigma.memory dependency** array library using vtable interfaces compatible with `sigma.collections.o`. The malloc variants bypass the Allocator system and use standard C library (`malloc`/`free`) directly. This is **NOT** for normal Sigma.* ecosystem code - if you're writing Sigma code with Allocators, use `sigma.collections.o` instead.
 
-**Purpose**: For embedded environments, profiling tools, minimal utilities, and contexts where sigma.memory/Allocator cannot be used.
+**Purpose**: For profiling tools that track sigma.memory itself, embedded environments where Allocator overhead is unacceptable, or minimal utilities that need arrays without the full collections framework.
 
 **Key Features**:
-- Zero sigma.* dependencies (libc only)
-- Two array types: FArray (flexible element size), PArray (pointer-specific)
-- Simple API: create, dispose, set, get, clear, remove
-- Bounds-checked operations
-- NULL-safe with explicit error returns
+- Zero sigma.memory/Allocator dependency (uses malloc/free directly)
+- **ABI-compatible** vtable interfaces matching FArray/PArray
+- Two array types: FArrayMalloc (flexible element size), PArrayMalloc (pointer-specific)
+- Uses sigma.core/types.h (usize, addr, object) for type compatibility
+- Global interfaces: `FArrayMalloc` and `PArrayMalloc`
+- Bounds-checked operations with OK/ERR returns
+- NULL-safe with explicit error handling
 
 ## When to Use This
 
@@ -53,92 +55,92 @@ gcc your_tool.c sigma.arrays.a -Iinclude -o your_tool
 
 ## API Reference
 
-### FArray - Flexible Array
+### FArrayMalloc - Flexible Array (Vtable Interface)
 
-Stores elements of any fixed size (like `sizeof(int)`, `sizeof(struct)`).
+Stores elements of any fixed size (like `sizeof(int)`, `sizeof(struct)`). ABI-compatible with `FArray` from sigma.collections.
 
 ```c
 #include "farray_malloc.h"
 
-// Create array for 10 integers
-farray_malloc arr = farray_malloc_create(sizeof(int), 10);
+// Create array for 10 integers using vtable interface
+farray_malloc arr = FArrayMalloc.new(10, sizeof(int));
 
 // Set element at index 5
 int value = 42;
-farray_malloc_set(arr, 5, &value);
+FArrayMalloc.set(arr, 5, sizeof(int), &value);
 
 // Get element at index 5
 int retrieved;
-farray_malloc_get(arr, 5, &retrieved);
+FArrayMalloc.get(arr, 5, sizeof(int), &retrieved);
 
 // Clear all elements to zero
-farray_malloc_clear(arr);
+FArrayMalloc.clear(arr, sizeof(int));
 
 // Remove (zero) specific element
-farray_malloc_remove(arr, 5);
+FArrayMalloc.remove(arr, 5, sizeof(int));
 
 // Query capacity
-size_t cap = farray_malloc_capacity(arr);
+int cap = FArrayMalloc.capacity(arr, sizeof(int));
 
 // Dispose when done
-farray_malloc_dispose(arr);
+FArrayMalloc.dispose(arr);
 ```
 
-**Functions**:
-- `farray_malloc_create(elem_size, capacity)` - Allocate array for `capacity` elements of `elem_size` bytes
-- `farray_malloc_dispose(arr)` - Free all memory (NULL-safe)
-- `farray_malloc_capacity(arr)` - Get capacity (return `size_t`)
-- `farray_malloc_set(arr, index, elem)` - Copy `elem` to `arr[index]` (return 0 or -1)
-- `farray_malloc_get(arr, index, out_elem)` - Copy `arr[index]` to `out_elem` (return 0 or -1)
-- `farray_malloc_clear(arr)` - Zero all elements
-- `farray_malloc_remove(arr, index)` - Zero element at `index` (return 0 or -1)
+**Interface: `sc_farray_malloc_i`**:
+- `new(capacity, stride)` - Allocate array for `capacity` elements of `stride` bytes
+- `init(farray_malloc *arr, capacity, stride)` - Initialize pre-allocated struct
+- `dispose(arr)` - Free all memory (NULL-safe)
+- `capacity(arr, stride)` - Get capacity (returns int)
+- `clear(arr, stride)` - Zero all elements
+- `set(arr, index, stride, elem)` - Copy `elem` to `arr[index]` (return OK or ERR)
+- `get(arr, index, stride, out_elem)` - Copy `arr[index]` to `out_elem` (return OK or ERR)
+- `remove(arr, index, stride)` - Zero element at `index` (return OK or ERR)
 
-**Error Handling**:
-- Returns `-1` for out-of-bounds, NULL parameters
-- Returns `NULL` for allocation failures
+**Note**: `stride` parameter provided for ABI compatibility with FArray. Implementation uses stored `elem_size` internally for efficiency.
 
-### PArray - Pointer Array
+### PArrayMalloc - Pointer Array (Vtable Interface)
 
-Stores pointers (`void*`) - optimized for pointer-specific operations.
+Stores pointers (`addr`/`void*`) - optimized for pointer-specific operations. ABI-compatible with `PArray` from sigma.collections.
 
 ```c
 #include "parray_malloc.h"
 
-// Create array for 10 pointers
-parray_malloc arr = parray_malloc_create(10);
+// Create array for 10 pointers using vtable interface
+parray_malloc arr = PArrayMalloc.new(10);
 
 // Set pointer at index 3
 void *my_data = some_allocation();
-parray_malloc_set(arr, 3, my_data);
+PArrayMalloc.set(arr, 3, (addr)my_data);
 
 // Get pointer at index 3
-void *retrieved;
-parray_malloc_get(arr, 3, &retrieved);
+addr retrieved;
+PArrayMalloc.get(arr, 3, &retrieved);
 
 // Clear all pointers to NULL
-parray_malloc_clear(arr);
+PArrayMalloc.clear(arr);
 
 // Remove (NULL) specific pointer
-parray_malloc_remove(arr, 3);
+PArrayMalloc.remove(arr, 3);
 
 // Query capacity
-size_t cap = parray_malloc_capacity(arr);
+int cap = PArrayMalloc.capacity(arr);
 
 // Dispose when done
-parray_malloc_dispose(arr);
+PArrayMalloc.dispose(arr);
 ```
 
-**Functions**:
-- `parray_malloc_create(capacity)` - Allocate array for `capacity` pointers
-- `parray_malloc_dispose(arr)` - Free all memory (NULL-safe)
-- `parray_malloc_capacity(arr)` - Get capacity (return `size_t`)
-- `parray_malloc_set(arr, index, ptr)` - Store `ptr` at `arr[index]` (return 0 or -1)
-- `parray_malloc_get(arr, index, out_ptr)` - Retrieve `arr[index]` to `out_ptr` (return 0 or -1)
-- `parray_malloc_clear(arr)` - Set all pointers to NULL
-- `parray_malloc_remove(arr, index)` - Set pointer at `index` to NULL (return 0 or -1)
+**Interface: `sc_parray_malloc_i`**:
+- `new(capacity)` - Allocate array for `capacity` pointers
+- `init(parray_malloc *arr, capacity)` - Initialize pre-allocated struct
+- `dispose(arr)` - Free all memory (NULL-safe)
+- `capacity(arr)` - Get capacity (returns int)
+- `clear(arr)` - Set all pointers to NULL
+- `set(arr, index, ptr)` - Store `ptr` at `arr[index]` (return OK or ERR)
+- `get(arr, index, out_ptr)` - Retrieve `arr[index]` to `out_ptr` (return OK or ERR)
+- `remove(arr, index)` - Set pointer at `index` to NULL (return OK or ERR)
 
 **Error Handling**:
-- Returns `-1` for out-of-bounds, NULL output parameter
+- Returns `ERR` (-1) for out-of-bounds, NULL output parameter
 - Returns `NULL` for allocation failures
 - Storing `NULL` pointers is valid (unlike error returns)
 
@@ -152,40 +154,58 @@ typedef struct {
     char name[32];
 } Person;
 
-farray_malloc people = farray_malloc_create(sizeof(Person), 100);
+farray_malloc people = FArrayMalloc.new(100, sizeof(Person));
 
 Person p = {1, "Alice"};
-farray_malloc_set(people, 0, &p);
+FArrayMalloc.set(people, 0, sizeof(Person), &p);
 
 Person retrieved;
-farray_malloc_get(people, 0, &retrieved);
+FArrayMalloc.get(people, 0, sizeof(Person), &retrieved);
 
-farray_malloc_dispose(people);
+FArrayMalloc.dispose(people);
 ```
 
 ### Example 2: Pointer Array for Dynamic Data
 
 ```c
-parray_malloc buffers = parray_malloc_create(10);
+parray_malloc buffers = PArrayMalloc.new(10);
 
 // Allocate and store buffers
-for (size_t i = 0; i < 10; i++) {
+for (usize i = 0; i < 10; i++) {
     void *buf = malloc(1024);
-    parray_malloc_set(buffers, i, buf);
+    PArrayMalloc.set(buffers, i, (addr)buf);
 }
 
 // Retrieve and use
-void *first_buffer;
-parray_malloc_get(buffers, 0, &first_buffer);
+addr first_buffer;
+PArrayMalloc.get(buffers, 0, &first_buffer);
 
 // Cleanup (you must free stored pointers yourself)
-for (size_t i = 0; i < 10; i++) {
-    void *buf;
-    parray_malloc_get(buffers, i, &buf);
-    free(buf);
+for (usize i = 0; i < 10; i++) {
+    addr buf;
+    PArrayMalloc.get(buffers, i, &buf);
+    free((void *)buf);
 }
 
-parray_malloc_dispose(buffers);
+PArrayMalloc.dispose(buffers);
+```
+
+### Example 3: ABI Compatibility (Advanced)
+
+The vtable structure allows pointer substitution when you need to switch between malloc and Allocator-based implementations:
+
+```c
+// Both interfaces have the same function signatures (except handle types)
+// This allows building generic code:
+
+typedef struct {
+    void *handle;
+    int (*capacity_fn)(void *, usize);  // Different first param types
+    // ... other function pointers
+} generic_array_ops;
+
+// Could switch between FArrayMalloc and FArray vtables at runtime
+// (with appropriate type casting for the handle)
 ```
 
 ## Testing
@@ -238,18 +258,33 @@ sudo ldconfig
 
 ## Design Notes
 
-### Why Duplicate Code?
+### ABI Compatibility
+
+The malloc variants use **identical vtable structures** to FArray/PArray from sigma.collections:
+- Same function pointer layout and signatures
+- Uses sigma.core/types.h for type compatibility (usize, addr, object)
+- Only difference: handle types (farray_malloc vs farray)
+
+This allows:
+- Drop-in substitution of vtable pointers in generic code
+- Binary-level interface compatibility
+- Testing collections code with malloc-based implementations
+- Building tools that work with either implementation
+
+**Note**: `stride` parameter appears in all FArrayMalloc operations for ABI compatibility, but the implementation stores `elem_size` at creation for efficiency. The stride parameter is marked `(void)stride` to avoid warnings.
+
+### Why Separate Implementation?
 
 The FArray/PArray implementations in `sigma.collections.o` depend on:
-- `coll_alloc()` dispatch (ties to Allocator framework)
-- sigma.core types (`addr`, `object`, `bool`)
-- Collections infrastructure (iterators, interfaces)
+- `coll_alloc()` dispatch (ties to Allocator framework via `alloc_use`)
+- Collections infrastructure (iterators, collection views, interfaces)
+- Future: **Phase 3A** will remove `malloc` fallback from collections entirely, requiring Allocator usage
 
-**Phase 3A** will remove `malloc` fallback from collections entirely, requiring all collections to use explicit Allocators. This malloc variant serves a different purpose:
-- **Collections**: Sophisticated, Allocator-aware, feature-rich (maps, iterators, etc.)
-- **Malloc Variant**: Minimal, standalone, pure libc forever
+**Phase 3A** removes the `malloc` fallback entirely from collections. This malloc variant serves a different purpose:
+- **Collections**: Sophisticated, Allocator-aware, feature-rich (maps, iterators, collection views)
+- **Malloc Variant**: Minimal, standalone, pure malloc/free forever, ABI-compatible
 
-They are **different products** with **different futures**.
+They are **different products** with **different futures** but **compatible interfaces**.
 
 ### Memory Management
 
