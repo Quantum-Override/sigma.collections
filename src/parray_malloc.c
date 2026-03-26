@@ -19,24 +19,24 @@ struct sc_pointer_array_malloc {
 };
 
 // Forward declarations
-static parray_malloc parray_malloc_new(usize capacity);
-static void parray_malloc_init_fn(parray_malloc *arr, usize capacity);
-static void parray_malloc_dispose_fn(parray_malloc arr);
-static int parray_malloc_capacity_fn(parray_malloc arr);
-static void parray_malloc_clear_fn(parray_malloc arr);
-static int parray_malloc_set_fn(parray_malloc arr, usize index, addr value);
-static int parray_malloc_get_fn(parray_malloc arr, usize index, addr *out_value);
-static int parray_malloc_remove_fn(parray_malloc arr, usize index);
+static parray parray_new(usize capacity);
+static void parray_init_fn(parray *arr, usize capacity);
+static void parray_dispose_fn(parray arr);
+static int parray_capacity_fn(parray arr);
+static void parray_clear_fn(parray arr);
+static int parray_set_fn(parray arr, usize index, addr value);
+static int parray_get_fn(parray arr, usize index, addr *out_value);
+static int parray_remove_fn(parray arr, usize index);
 
 // API implementations
 
-static parray_malloc parray_malloc_new(usize capacity) {
+static parray parray_new(usize capacity) {
     if (capacity == 0) {
         return NULL;
     }
 
     // Allocate struct
-    parray_malloc arr = (parray_malloc)malloc(sizeof(struct sc_pointer_array_malloc));
+    parray arr = (parray)malloc(sizeof(struct sc_pointer_array_malloc));
     if (!arr) {
         return NULL;
     }
@@ -57,14 +57,14 @@ static parray_malloc parray_malloc_new(usize capacity) {
     return arr;
 }
 
-static void parray_malloc_init_fn(parray_malloc *arr, usize capacity) {
+static void parray_init_fn(parray *arr, usize capacity) {
     if (!arr) {
         return;
     }
-    *arr = parray_malloc_new(capacity);
+    *arr = parray_new(capacity);
 }
 
-static void parray_malloc_dispose_fn(parray_malloc arr) {
+static void parray_dispose_fn(parray arr) {
     if (!arr) {
         return;
     }
@@ -75,11 +75,9 @@ static void parray_malloc_dispose_fn(parray_malloc arr) {
     free(arr);
 }
 
-static int parray_malloc_capacity_fn(parray_malloc arr) {
-    return arr ? (int)arr->capacity : 0;
-}
+static int parray_capacity_fn(parray arr) { return arr ? (int)arr->capacity : 0; }
 
-static int parray_malloc_set_fn(parray_malloc arr, usize index, addr value) {
+static int parray_set_fn(parray arr, usize index, addr value) {
     if (!arr || index >= arr->capacity) {
         return ERR;
     }
@@ -89,7 +87,7 @@ static int parray_malloc_set_fn(parray_malloc arr, usize index, addr value) {
     return OK;
 }
 
-static int parray_malloc_get_fn(parray_malloc arr, usize index, addr *out_value) {
+static int parray_get_fn(parray arr, usize index, addr *out_value) {
     if (!arr || !out_value || index >= arr->capacity) {
         return ERR;
     }
@@ -99,7 +97,7 @@ static int parray_malloc_get_fn(parray_malloc arr, usize index, addr *out_value)
     return OK;
 }
 
-static void parray_malloc_clear_fn(parray_malloc arr) {
+static void parray_clear_fn(parray arr) {
     if (!arr || !arr->data) {
         return;
     }
@@ -107,7 +105,7 @@ static void parray_malloc_clear_fn(parray_malloc arr) {
     memset(arr->data, 0, sizeof(addr) * arr->capacity);
 }
 
-static int parray_malloc_remove_fn(parray_malloc arr, usize index) {
+static int parray_remove_fn(parray arr, usize index) {
     if (!arr || index >= arr->capacity) {
         return ERR;
     }
@@ -118,13 +116,13 @@ static int parray_malloc_remove_fn(parray_malloc arr, usize index) {
 }
 
 // Global interface instance
-const sc_parray_malloc_i PArrayMalloc = {
-    .new = parray_malloc_new,
-    .init = parray_malloc_init_fn,
-    .dispose = parray_malloc_dispose_fn,
-    .capacity = parray_malloc_capacity_fn,
-    .clear = parray_malloc_clear_fn,
-    .set = parray_malloc_set_fn,
-    .get = parray_malloc_get_fn,
-    .remove = parray_malloc_remove_fn,
+const sc_parray_i PArray = {
+    .new = parray_new,
+    .init = parray_init_fn,
+    .dispose = parray_dispose_fn,
+    .capacity = parray_capacity_fn,
+    .clear = parray_clear_fn,
+    .set = parray_set_fn,
+    .get = parray_get_fn,
+    .remove = parray_remove_fn,
 };
