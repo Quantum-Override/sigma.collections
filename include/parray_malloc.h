@@ -6,78 +6,73 @@
  * MIT License
  * ----------------------------------------------
  * File: parray_malloc.h
- * Description: Standalone malloc-based pointer array (zero dependencies)
- * 
- * NOTE: This is a malloc variant for zero-dependency usage.
- *       For Sigma.* ecosystem code, use sigma.collections.o instead.
+ * Description: Standalone malloc-based pointer array (no sigma.memory dependency)
+ *
+ * NOTE: This is a malloc variant that bypasses sigma.memory/Allocator.
+ *       For normal Sigma.* ecosystem code, use sigma.collections.o instead.
  */
 
 #pragma once
 
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sigma.core/types.h>
 
-/**
- * @brief Opaque pointer array handle
- */
-typedef struct parray_malloc_s *parray_malloc;
+// Forward declaration of the pointer array structure
+struct sc_pointer_array_malloc;
+typedef struct sc_pointer_array_malloc *parray_malloc;
 
-/**
- * @brief Create a new pointer array with system malloc
- * 
- * @param capacity Initial capacity (number of pointer slots)
- * @return New parray or NULL on allocation failure
- */
-parray_malloc parray_malloc_create(size_t capacity);
+/* Public interface for malloc-based pointer array operations   */
+/* ============================================================ */
+typedef struct sc_parray_malloc_i {
+    /**
+     * @brief Initialize a new array with the specified initial capacity.
+     * @param capacity Initial array capacity
+     */
+    parray_malloc (*new)(usize);
+    /**
+     * @brief Initialize an array with the specified capacity.
+     * @param arr The array to initialize
+     * @param capacity Initial array capacity
+     */
+    void (*init)(parray_malloc *, usize);
+    /**
+     * @brief Dispose of the array and free associated resources.
+     * @param arr The array to dispose of
+     */
+    void (*dispose)(parray_malloc);
+    /**
+     * @brief Get the current capacity of the array.
+     * @param arr The array to query
+     * @return Current capacity of the array
+     */
+    int (*capacity)(parray_malloc);
+    /**
+     * @brief Clear the contents of the array.
+     * @param arr The array to clear
+     */
+    void (*clear)(parray_malloc);
+    /**
+     * @brief Set the value at the specified index in the array.
+     * @param arr The array to modify
+     * @param index Index at which to set the value
+     * @param value Value to set
+     * @return 0 on OK; otherwise non-zero
+     */
+    int (*set)(parray_malloc, usize, addr);
+    /**
+     * @brief Get the value at the specified index in the array.
+     * @param arr The array to query
+     * @param index Index from which to get the value
+     * @param out_value Pointer to store the retrieved value
+     * @return 0 on OK; otherwise non-zero
+     */
+    int (*get)(parray_malloc, usize, addr *);
+    /**
+     * @brief Remove the element at the specified index, setting it to empty without shifting.
+     * @param arr The array to modify
+     * @param index Index of the element to remove
+     * @return 0 on OK; otherwise non-zero
+     */
+    int (*remove)(parray_malloc, usize);
+} sc_parray_malloc_i;
 
-/**
- * @brief Dispose of array and free all resources
- * 
- * @param arr Array to dispose (safe to pass NULL)
- */
-void parray_malloc_dispose(parray_malloc arr);
-
-/**
- * @brief Get current capacity
- * 
- * @param arr Array to query
- * @return Capacity in number of pointer slots, or 0 if arr is NULL
- */
-size_t parray_malloc_capacity(parray_malloc arr);
-
-/**
- * @brief Set pointer at index
- * 
- * @param arr   Array to modify
- * @param index Index to set (must be < capacity)
- * @param ptr   Pointer value to store
- * @return 0 on success, -1 on error (NULL arr, out of bounds)
- */
-int parray_malloc_set(parray_malloc arr, size_t index, void *ptr);
-
-/**
- * @brief Get pointer at index
- * 
- * @param arr       Array to query
- * @param index     Index to get (must be < capacity)
- * @param out_ptr   Pointer to receive pointer value
- * @return 0 on success, -1 on error (NULL arr, out of bounds, NULL out_ptr)
- */
-int parray_malloc_get(parray_malloc arr, size_t index, void **out_ptr);
-
-/**
- * @brief Clear all pointers (set to NULL)
- * 
- * @param arr Array to clear
- */
-void parray_malloc_clear(parray_malloc arr);
-
-/**
- * @brief Remove pointer at index (set to NULL)
- * 
- * @param arr   Array to modify
- * @param index Index to remove (must be < capacity)
- * @return 0 on success, -1 on error
- */
-int parray_malloc_remove(parray_malloc arr, size_t index);
+extern const sc_parray_malloc_i PArrayMalloc;

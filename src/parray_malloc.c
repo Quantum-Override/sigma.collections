@@ -13,87 +13,118 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct parray_malloc_s {
-    size_t capacity;   // Number of pointer slots allocated
-    void **data;       // Pointer to pointer storage
+struct sc_pointer_array_malloc {
+    usize capacity;  // Number of pointer slots allocated
+    addr *data;      // Pointer to pointer storage
 };
 
-parray_malloc parray_malloc_create(size_t capacity) {
+// Forward declarations
+static parray_malloc parray_malloc_new(usize capacity);
+static void parray_malloc_init_fn(parray_malloc *arr, usize capacity);
+static void parray_malloc_dispose_fn(parray_malloc arr);
+static int parray_malloc_capacity_fn(parray_malloc arr);
+static void parray_malloc_clear_fn(parray_malloc arr);
+static int parray_malloc_set_fn(parray_malloc arr, usize index, addr value);
+static int parray_malloc_get_fn(parray_malloc arr, usize index, addr *out_value);
+static int parray_malloc_remove_fn(parray_malloc arr, usize index);
+
+// API implementations
+
+static parray_malloc parray_malloc_new(usize capacity) {
     if (capacity == 0) {
         return NULL;
     }
-    
+
     // Allocate struct
-    parray_malloc arr = (parray_malloc)malloc(sizeof(struct parray_malloc_s));
+    parray_malloc arr = (parray_malloc)malloc(sizeof(struct sc_pointer_array_malloc));
     if (!arr) {
         return NULL;
     }
-    
+
     // Allocate pointer array
-    size_t total_size = sizeof(void *) * capacity;
-    arr->data = (void **)malloc(total_size);
+    usize total_size = sizeof(addr) * capacity;
+    arr->data = (addr *)malloc(total_size);
     if (!arr->data) {
         free(arr);
         return NULL;
     }
-    
+
     arr->capacity = capacity;
-    
+
     // Initialize all pointers to NULL
     memset(arr->data, 0, total_size);
-    
+
     return arr;
 }
 
-void parray_malloc_dispose(parray_malloc arr) {
+static void parray_malloc_init_fn(parray_malloc *arr, usize capacity) {
     if (!arr) {
         return;
     }
-    
+    *arr = parray_malloc_new(capacity);
+}
+
+static void parray_malloc_dispose_fn(parray_malloc arr) {
+    if (!arr) {
+        return;
+    }
+
     if (arr->data) {
         free(arr->data);
     }
     free(arr);
 }
 
-size_t parray_malloc_capacity(parray_malloc arr) {
-    return arr ? arr->capacity : 0;
+static int parray_malloc_capacity_fn(parray_malloc arr) {
+    return arr ? (int)arr->capacity : 0;
 }
 
-int parray_malloc_set(parray_malloc arr, size_t index, void *ptr) {
+static int parray_malloc_set_fn(parray_malloc arr, usize index, addr value) {
     if (!arr || index >= arr->capacity) {
-        return -1;
+        return ERR;
     }
-    
-    arr->data[index] = ptr;
-    
-    return 0;
+
+    arr->data[index] = value;
+
+    return OK;
 }
 
-int parray_malloc_get(parray_malloc arr, size_t index, void **out_ptr) {
-    if (!arr || !out_ptr || index >= arr->capacity) {
-        return -1;
+static int parray_malloc_get_fn(parray_malloc arr, usize index, addr *out_value) {
+    if (!arr || !out_value || index >= arr->capacity) {
+        return ERR;
     }
-    
-    *out_ptr = arr->data[index];
-    
-    return 0;
+
+    *out_value = arr->data[index];
+
+    return OK;
 }
 
-void parray_malloc_clear(parray_malloc arr) {
+static void parray_malloc_clear_fn(parray_malloc arr) {
     if (!arr || !arr->data) {
         return;
     }
-    
-    memset(arr->data, 0, sizeof(void *) * arr->capacity);
+
+    memset(arr->data, 0, sizeof(addr) * arr->capacity);
 }
 
-int parray_malloc_remove(parray_malloc arr, size_t index) {
+static int parray_malloc_remove_fn(parray_malloc arr, usize index) {
     if (!arr || index >= arr->capacity) {
-        return -1;
+        return ERR;
     }
-    
-    arr->data[index] = NULL;
-    
-    return 0;
+
+    arr->data[index] = (addr)NULL;
+
+    return OK;
 }
+
+// Global interface instance
+const sc_parray_malloc_i PArrayMalloc = {
+    .new = parray_malloc_new,
+    .init = parray_malloc_init_fn,
+    .dispose = parray_malloc_dispose_fn,
+    .capacity = parray_malloc_capacity_fn,
+    .clear = parray_malloc_clear_fn,
+    .set = parray_malloc_set_fn,
+    .get = parray_malloc_get_fn,
+    .remove = parray_malloc_remove_fn,
+};
