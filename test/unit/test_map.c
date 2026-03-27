@@ -3,7 +3,7 @@
  *  Description: Test cases for Map collection (string-keyed hash map)
  */
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -419,8 +419,9 @@ static void test_map_iterate_keys_values(void) {
 // Test Registration
 //------------------------------------------------------------------------------
 
-__attribute__((constructor)) void init_map_tests(void) {
+static void register_map_tests(void) {
     testset("core_map_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     // Basic operations
     testcase("map_new_dispose", test_map_new_dispose);
@@ -450,4 +451,7 @@ __attribute__((constructor)) void init_map_tests(void) {
 
     // Iterator
     testcase("map_iterate_keys_values", test_map_iterate_keys_values);
+}
+__attribute__((constructor)) static void enqueue_map_tests(void) {
+    Tests.enqueue(register_map_tests);
 }

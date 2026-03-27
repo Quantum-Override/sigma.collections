@@ -2,7 +2,7 @@
 
 High-performance C collection library providing unified interfaces for array-based data structures with support for both dense and sparse collections.
 
-**Version**: 0.2.0 (RC)  
+**Version**: 0.2.1  
 **License**: BSD-3-Clause
 
 ## Features
@@ -14,8 +14,8 @@ High-performance C collection library providing unified interfaces for array-bas
 - **Dynamic Growth**: Automatic resizing for List, IndexArray, and Map
 - **Buffer Views**: Non-owning views from pre-allocated memory
 - **Memory Efficient**: Cache-friendly contiguous layouts
-- **Custom Allocation**: `alloc_use` hook for custom allocators (v0.2.0+)
-- **Testing Integration**: Native support for sigma.test leak detection
+- **Memory Management**: Uses Allocator facade from sigma.memory (v0.2.1+)
+- **Testing Integration**: Native support for sigma.test framework
 
 ## Quick Start
 

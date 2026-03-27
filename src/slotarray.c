@@ -37,7 +37,7 @@
 #include "internal/collections.h"
 #include "parray.h"
 // ------------------------------
-#include <stdlib.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
 
 //  declare the SlotArray struct: uses parray internally
@@ -53,7 +53,7 @@ slotarray slotarray_create_view(parray arr) {
     if (!arr) {
         goto exit;
     }
-    sa = coll_alloc(sizeof(struct sc_slotarray));
+    sa = Allocator.alloc(sizeof(struct sc_slotarray));
     if (!sa) {
         goto exit;
     }
@@ -69,7 +69,7 @@ exit:
 // create new slotarray with specified initial capacity
 static slotarray slotarray_new(usize capacity) {
     //  allocate memory for the slotarray structure
-    slotarray sa = coll_alloc(sizeof(struct sc_slotarray));
+    slotarray sa = Allocator.alloc(sizeof(struct sc_slotarray));
     if (!sa) {
         goto exit;
     }
@@ -85,7 +85,7 @@ static slotarray slotarray_new(usize capacity) {
     return sa;
 
 cleanup:
-    coll_free(sa);
+    Allocator.dispose(sa);
     sa = NULL;
 
 exit:
@@ -99,7 +99,7 @@ static void slotarray_dispose(slotarray sa) {
     if (sa->owns_array) {
         PArray.dispose(sa->array);
     }
-    coll_free(sa);
+    Allocator.dispose(sa);
 }
 // add a value to the slotarray, reusing empty slots if available
 static int slotarray_add(slotarray sa, object value) {
@@ -207,7 +207,7 @@ static slotarray slotarray_from_value_array(farray arr, usize stride) {
         return NULL;
     }
     for (usize i = 0; i < cap; i++) {
-        void *value = coll_alloc(stride);
+        void *value = Allocator.alloc(stride);
         if (!value) {
             SlotArray.dispose(sa);
             return NULL;
@@ -215,7 +215,7 @@ static slotarray slotarray_from_value_array(farray arr, usize stride) {
         if (FArray.get(arr, i, stride, value) == OK) {
             SlotArray.add(sa, value);
         } else {
-            coll_free(value);
+            Allocator.dispose(value);
         }
     }
     return sa;
@@ -248,5 +248,4 @@ const sc_slotarray_i SlotArray = {
     .capacity = slotarray_capacity,
     .clear = slotarray_clear,
     .create_iterator = slotarray_create_iterator,
-    .alloc_use = coll_set_alloc_use,
 };

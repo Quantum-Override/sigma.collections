@@ -12,7 +12,7 @@
  *  where these functions determine a higher-level behavior.
  */
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <string.h>
 #include "collections.h"
@@ -226,8 +226,9 @@ static void test_array_remove_out_of_bounds(void) {
 }
 
 //  register test cases
-__attribute__((constructor)) void init_array_tests(void) {
+static void register_parray_tests(void) {
     testset("core_pointer_array_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("array_creation", test_array_new);
     testcase("array_init_from_null", test_array_init_from_null);
@@ -245,4 +246,8 @@ __attribute__((constructor)) void init_array_tests(void) {
     testcase("array_set_out_of_bounds", test_array_set_out_of_bounds);
     testcase("array_get_out_of_bounds", test_array_get_out_of_bounds);
     testcase("array_remove_out_of_bounds", test_array_remove_out_of_bounds);
+}
+__attribute__((constructor)) static void enqueue_parray_tests(void) {
+    Tests.enqueue(register_parray_tests);
+}
 }

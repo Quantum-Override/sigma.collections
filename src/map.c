@@ -20,7 +20,7 @@
  */
 
 #include "map.h"
-#include <stdlib.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
 #include "farray.h"
 #include "internal/arrays.h"
@@ -43,7 +43,6 @@ static int map_has(map m, const char *key, usize len);
 static int map_remove(map m, const char *key, usize len);
 static usize map_count(map m);
 static usize map_capacity(map m);
-static void map_alloc_use(sc_alloc_use_t *use);
 static sparse_iterator map_create_iterator(map m);
 
 // Forward declarations - helper functions
@@ -93,7 +92,6 @@ const sc_map_i Map = {
     .remove = map_remove,
     .count = map_count,
     .capacity = map_capacity,
-    .alloc_use = map_alloc_use,
     .create_iterator = map_create_iterator,
 };
 
@@ -231,7 +229,7 @@ static int map_resize(map m, usize new_capacity) {
  * @brief Create a new map
  */
 static map map_new(usize capacity) {
-    map m = coll_alloc(sizeof(struct sc_map_s));
+    map m = Allocator.alloc(sizeof(struct sc_map_s));
     if (!m) {
         return NULL;
     }
@@ -276,7 +274,7 @@ static void map_dispose(map m) {
         FArray.dispose(m->buckets);
     }
 
-    coll_free(m);
+    Allocator.dispose(m);
 }
 
 /**
@@ -381,11 +379,6 @@ static usize map_count(map m) { return m ? m->count : 0; }
  * @brief Get bucket capacity
  */
 static usize map_capacity(map m) { return m ? m->capacity : 0; }
-
-/**
- * @brief Set custom allocator (delegates to collections module)
- */
-static void map_alloc_use(sc_alloc_use_t *use) { coll_set_alloc_use(use); }
 
 /**
  * @brief Check if slot is empty (for sparse iterator)

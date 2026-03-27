@@ -5,7 +5,7 @@
 
 // #define SIGMA_MEMORY_AVAILABLE
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,9 +45,13 @@ static void test_farray_with_allocator(void) {
 }
 
 //  register test cases
-__attribute__((constructor)) void init_collections_allocator_tests(void) {
+static void register_collections_allocator_tests(void) {
     testset("collections_allocator_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("list_with_allocator", test_list_with_allocator);
     testcase("farray_with_allocator", test_farray_with_allocator);
+}
+__attribute__((constructor)) static void enqueue_collections_allocator_tests(void) {
+    Tests.enqueue(register_collections_allocator_tests);
 }

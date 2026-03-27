@@ -179,27 +179,6 @@ typedef struct sc_map_i {
     usize (*capacity)(map m);
 
     /**
-     * @brief Set custom allocator for map operations
-     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free
-     *
-     * Note: Sets module-level allocator affecting all map instances.
-     * Typically called once at startup or test setup.
-     *
-     * Example:
-     * @code
-     * // For arena integration
-     * Map.alloc_use(&arena_allocator);
-     *
-     * // For test framework
-     * Map.alloc_use(sigtest_alloc_use());
-     *
-     * // Restore default
-     * Map.alloc_use(NULL);
-     * @endcode
-     */
-    void (*alloc_use)(sc_alloc_use_t *use);
-
-    /**
      * @brief Create iterator for map entries
      * @param m The map to iterate over
      * @return Sparse iterator or NULL on failure

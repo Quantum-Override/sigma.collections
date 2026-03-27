@@ -37,7 +37,7 @@
 #include "internal/arrays.h"
 #include "internal/collections.h"
 // ------------------------------
-#include <stdlib.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
 
 //  declare the FlexArray struct: the collection with attitude
@@ -91,9 +91,9 @@ static void farray_init(farray *arr, usize capacity, usize stride) {
         // what to do about an farray that's already initialized?
         // for now, we just reallocate the bucket
         if ((*arr)->bucket) {
-            coll_free((*arr)->bucket);
+            Allocator.dispose((*arr)->bucket);
         }
-        (*arr)->bucket = coll_alloc(stride * capacity);
+        (*arr)->bucket = Allocator.alloc(stride * capacity);
         if (!(*arr)->bucket) {
             // allocation ERRed, handle error as needed
             return;
@@ -186,5 +186,4 @@ const sc_farray_i FArray = {
     .remove = farray_remove_at,
     .as_collection = farray_as_collection,
     .to_collection = farray_to_collection,
-    .alloc_use = coll_set_alloc_use,
 };

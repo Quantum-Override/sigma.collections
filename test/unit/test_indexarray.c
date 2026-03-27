@@ -3,7 +3,7 @@
  *  Description: Test cases for IndexArray collection
  */
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -396,8 +396,9 @@ static void test_indexarray_iterator_full(void) {
 }
 
 //  register test cases
-__attribute__((constructor)) void init_indexarray_tests(void) {
+static void register_indexarray_tests(void) {
     testset("core_indexarray_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("indexarray_creation", test_indexarray_new);
     testcase("indexarray_dispose", test_indexarray_dispose);
@@ -415,4 +416,7 @@ __attribute__((constructor)) void init_indexarray_tests(void) {
     testcase("indexarray_iterator_empty", test_indexarray_iterator_empty);
     testcase("indexarray_iterator_sparse", test_indexarray_iterator_sparse);
     testcase("indexarray_iterator_full", test_indexarray_iterator_full);
+}
+__attribute__((constructor)) static void enqueue_indexarray_tests(void) {
+    Tests.enqueue(register_indexarray_tests);
 }

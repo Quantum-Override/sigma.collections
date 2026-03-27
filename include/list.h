@@ -113,10 +113,5 @@ typedef struct sc_list_i {
      * @param lst The list to clear
      */
     void (*clear)(list);
-    /**
-     * @brief Configure the allocator used by List operations.
-     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free fallback
-     */
-    void (*alloc_use)(sc_alloc_use_t *use);
 } sc_list_i;
 extern const sc_list_i List;
