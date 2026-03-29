@@ -16,6 +16,7 @@ The malloc variant (`sigma.arrays.a`) is used for:
 - **Embedded environments** with minimal dependencies
 - **Standalone utilities** that don't need the full Sigma ecosystem
 - **Phase 0 deliverables** where sigma.memory integration isn't available
+- **Taste But Don't Feast** where users want to check out what we're doing without buying into the entire ecosystem
 
 ## Critical Requirement: Feature Parity
 
