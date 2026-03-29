@@ -1,7 +1,7 @@
 /*
  * Test file for iterator utilities
  */
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <string.h>
 #include "collections.h"
 
@@ -71,8 +71,12 @@ void test_iterator_basic(void) {
 }
 
 // Register tests
-__attribute__((constructor)) void init_iterator_tests(void) {
+static void register_iterator_tests(void) {
     testset("core_iterator_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("Iterator basic", test_iterator_basic);
+}
+__attribute__((constructor)) static void enqueue_iterator_tests(void) {
+    Tests.enqueue(register_iterator_tests);
 }

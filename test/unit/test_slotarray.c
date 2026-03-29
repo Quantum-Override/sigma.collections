@@ -3,7 +3,7 @@
  *  Description: Test cases for SigmaCore array interfaces
  */
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -504,8 +504,9 @@ static void test_slotarray_iterator_full(void) {
 }
 
 //  register test cases
-__attribute__((constructor)) void init_slotarray_tests(void) {
+static void register_slotarray_tests(void) {
     testset("core_slotarray_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("slotarray_creation", test_slotarray_new);
     testcase("slotarray_dispose", test_slotarray_dispose);
@@ -530,4 +531,8 @@ __attribute__((constructor)) void init_slotarray_tests(void) {
     testcase("slotarray_iterator_empty", test_slotarray_iterator_empty);
     testcase("slotarray_iterator_sparse", test_slotarray_iterator_sparse);
     testcase("slotarray_iterator_full", test_slotarray_iterator_full);
+}
+__attribute__((constructor)) static void enqueue_slotarray_tests(void) {
+    Tests.enqueue(register_slotarray_tests);
+}
 }

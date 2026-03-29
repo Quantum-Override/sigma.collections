@@ -8,7 +8,7 @@
  *  where memory efficiency is important.
  */
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -246,8 +246,9 @@ static void test_farray_remove_out_of_bounds(void) {
 }
 
 //  register test cases
-__attribute__((constructor)) void init_farray_tests(void) {
+static void register_farray_tests(void) {
     testset("core_farray_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("farray_creation", test_farray_new);
     testcase("farray_init_from_null", test_farray_init_from_null);
@@ -265,4 +266,7 @@ __attribute__((constructor)) void init_farray_tests(void) {
     testcase("farray_set_out_of_bounds", test_farray_set_out_of_bounds);
     testcase("farray_get_out_of_bounds", test_farray_get_out_of_bounds);
     testcase("farray_remove_out_of_bounds", test_farray_remove_out_of_bounds);
+}
+__attribute__((constructor)) static void enqueue_farray_tests(void) {
+    Tests.enqueue(register_farray_tests);
 }

@@ -40,6 +40,7 @@
 
 #include "collection.h"
 // ----------------
+#include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
 
 // forward declaration of the array structure

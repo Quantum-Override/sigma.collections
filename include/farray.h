@@ -39,6 +39,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
 #include "collection.h"
 

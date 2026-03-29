@@ -26,8 +26,9 @@
  */
 
 #include "indexarray.h"
-#include <sigma.core/alloc.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
+#include "internal/arrays.h"
 #include "internal/collections.h"
 
 // IndexArray struct: uses collection internally

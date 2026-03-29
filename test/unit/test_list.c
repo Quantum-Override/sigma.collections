@@ -3,7 +3,7 @@
  *  Description: Test cases for SigmaCore array interfaces
  */
 
-#include <sigtest/sigtest.h>
+#include <sigma.test/sigtest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -472,8 +472,9 @@ static void test_list_append_null_value(void) {
 }
 
 //  register test cases
-__attribute__((constructor)) void init_list_tests(void) {
+static void register_list_tests(void) {
     testset("core_list_set", set_config, set_teardown);
+    DebugLogger.log("Test Source: %s", __FILE__);
 
     testcase("list_creation", test_list_new);
     testcase("list_dispose", test_list_dispose);
@@ -501,6 +502,9 @@ __attribute__((constructor)) void init_list_tests(void) {
     testcase("list_get_empty_list", test_list_get_empty_list);
     testcase("list_remove_empty_list", test_list_remove_empty_list);
     testcase("list_append_null_value", test_list_append_null_value);
+}
+__attribute__((constructor)) static void enqueue_list_tests(void) {
+    Tests.enqueue(register_list_tests);
 }
 
 static void load_person_list(list *lst) {

@@ -24,9 +24,12 @@ if [ "$ASAN_ENABLED" = true ]; then
 fi
 
 CFLAGS="$BASE_CFLAGS"
-TST_CFLAGS="$CFLAGS -DTSTDBG -I/usr/include/sigmatest"
+TST_CFLAGS="$CFLAGS -DTSTDBG"
 LDFLAGS="-L/usr/local/packages"
-TST_LDFLAGS="-lstest -L/usr/lib -L/usr/local/packages -l:sigma.core.alloc.o"
+TST_LDFLAGS="-lstest -L/usr/lib -L/usr/local/packages"
+
+# Required dependencies (linked .o files from /usr/local/packages)
+REQUIRES=("sigma.core" "sigma.memory" "sigma.test")
 
 SRC_DIR=src
 BUILD_DIR=build
@@ -37,7 +40,7 @@ TST_BUILD_DIR="$BUILD_DIR/test"
 
 # Bundle definitions:
 declare -A PACKAGES=(
-    ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray indexarray"
+    ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray indexarray map"
 )
 
 # Build target definitions:

@@ -11,7 +11,7 @@ Use TDD (Test-Driven Development) for all feature implementations:
 3. Implement a passing function to satisfy the test
 4. Move on to the next test
 
-**Gateway**: when working with allocations, always use `--valgrind` in the `ctest` command to ensure we have not started leaking memory.
+**Gateway**: when working with allocations, always use `--valgrind` in the `./rtest` command to ensure we have not started leaking memory.
 
 If resolving a bug in a complex function, atomize the function to allow for micro-testing the individual concerns. Then, provide invariants to stress the solution and poke it for weaknesses.
 
@@ -88,7 +88,7 @@ void test_example(void) {
 // Logs: logs/test_*.log
 
 // execute tests
-ctest memory // to execute test runner on "test_memory.c"
+./rtest unit/memory // to execute test runner on "test_memory.c"
 ```
 
 ## Code Organization
@@ -279,3 +279,22 @@ static void complex_operation_cleanup(object param1) {
 - `test/test_memory.c` - Testing patterns
 - `Makefile` - Build system
 - `README.md` - Usage examples
+
+## Changelog
+
+`changelog.anvl` is the **source of truth** for this project's release history. `CHANGELOG.md` is generated output — do not edit it directly.
+
+To record a release:
+1. Add a new version block to `changelog.anvl` (e.g. `v0_2_1 @[date="YYYY-MM-DD"] { }`)
+2. Populate `added[]`, `changed[]`, `fixed[]`, `removed[]` arrays as applicable — include empty arrays for unused categories
+3. If the release has breaking changes, add `breaking @[breaking=true] := []` and a `migration_notes` string
+4. Run `python3 ../tools/clog.py sigma.collections` to regenerate `CHANGELOG.md`
+
+The `changelog` path for this project is registered in `q-or/repo.anvl`.
+
+## Agent Boundaries
+
+- **Source edits**: Only modify files within this project's directory tree. Do NOT edit source files in other projects.
+- **Reading**: May read files in sibling projects for context (headers, interfaces, documentation).
+- **Tickets**: Every ticket (`TICKET-*`) must include a `## Test Cases` section with concrete inputs and expected outputs or assertions.
+- **Session continuity**: At session start, read `q-or/wip.anvl` (merged view). If sigma.collections has active work, announce feature, completed steps, and `next_action`. To update: edit `q-or/wip/sigma.collections.anvl`, then run `python3 tools/wip.py sync`.

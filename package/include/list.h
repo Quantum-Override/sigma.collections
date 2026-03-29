@@ -30,6 +30,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include "collections.h"
 
 // forward declaration of the list structure

@@ -32,8 +32,7 @@
 #include "internal/arrays.h"
 #include "internal/collections.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
-#include <stdlib.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
 #include "internal/array_base.h"
 

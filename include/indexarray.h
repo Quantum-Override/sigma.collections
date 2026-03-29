@@ -32,6 +32,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include "collection.h"
 #include "farray.h"
 

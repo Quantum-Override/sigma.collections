@@ -1,0 +1,22 @@
+Test Source: test/unit/test_map.c
+[2] core_map_set              :   17 : 2026-03-27  19:51:35                     
+================================================================================
+Running: map_new_dispose                                       17.457 µs [PASS]
+Running: map_set_get_single                                    10.060 µs [PASS]
+Running: map_set_multiple                                       9.742 µs [PASS]
+Running: map_update_existing_key                                9.298 µs [PASS]
+Running: map_get_nonexistent                                    9.658 µs [PASS]
+Running: map_has                                                9.184 µs [PASS]
+Running: map_remove                                             9.320 µs [PASS]
+Running: map_remove_nonexistent                                 8.983 µs [PASS]
+Running: map_remove_and_reinsert                                9.284 µs [PASS]
+Running: map_automatic_resize                                  24.047 µs [PASS]
+Running: map_large_insertion                                  118.066 µs [PASS]
+Running: map_empty_key                                         29.370 µs [PASS]
+Running: map_key_with_nulls                                    11.107 µs [PASS]
+Running: map_collision_handling                                19.181 µs [PASS]
+Running: map_null_safety                                       28.593 µs [PASS]
+Running: map_arena_pattern                                     11.280 µs [PASS]
+Running: map_iterate_keys_values                               25.525 µs [PASS]
+================================================================================
+[2]     TESTS= 17        PASS= 17        FAIL=  0        SKIP=  0

@@ -33,6 +33,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include "farray.h"
 struct sc_slotarray;
 typedef struct sc_slotarray *slotarray;

@@ -33,11 +33,11 @@
  */
 
 #include "slotarray.h"
+#include "internal/arrays.h"
 #include "internal/collections.h"
 #include "parray.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
-#include <stdlib.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
 
 //  declare the SlotArray struct: uses parray internally

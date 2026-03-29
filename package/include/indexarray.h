@@ -32,8 +32,9 @@
  */
 #pragma once
 
-#include "farray.h"
+#include <sigma.core/allocator.h>
 #include "collection.h"
+#include "farray.h"
 
 struct sc_indexarray;
 typedef struct sc_indexarray *indexarray;
@@ -52,13 +53,13 @@ typedef struct sc_indexarray_i {
      * @return A pointer to the newly created IndexArray, or NULL on failure.
      */
     indexarray (*new)(usize capacity, usize stride);
-    
+
     /**
      * @brief Dispose of the IndexArray and free its resources.
      * @param ia The IndexArray to dispose.
      */
     void (*dispose)(indexarray ia);
-    
+
     /**
      * @brief Add a value to the IndexArray, reusing empty slots if available or growing if needed.
      * @param ia The IndexArray to add the value to.
@@ -66,7 +67,7 @@ typedef struct sc_indexarray_i {
      * @return The index (handle) where the value was added; otherwise -1.
      */
     int (*add)(indexarray ia, object value);
-    
+
     /**
      * @brief Retrieve the value at the specified index (handle) in the IndexArray.
      * @param ia The IndexArray to retrieve the value from.
@@ -75,7 +76,7 @@ typedef struct sc_indexarray_i {
      * @return 0 on OK; otherwise non-zero
      */
     int (*get_at)(indexarray ia, usize index, object out_value);
-    
+
     /**
      * @brief Remove the element at the specified index (handle) from the IndexArray.
      * @param ia The IndexArray to remove the element from.
@@ -83,7 +84,7 @@ typedef struct sc_indexarray_i {
      * @return 0 on OK; otherwise non-zero
      */
     int (*remove_at)(indexarray ia, usize index);
-    
+
     /**
      * @brief Create an IndexArray from a flex array, copying all elements.
      * @param arr The flex array to copy from.
@@ -91,7 +92,7 @@ typedef struct sc_indexarray_i {
      * @return A new IndexArray with the elements, or NULL on failure.
      */
     indexarray (*from_farray)(farray arr, usize stride);
-    
+
     /**
      * @brief Create a non-owning IndexArray view from a raw buffer range.
      * @param buffer Pointer to the start of the buffer.
@@ -101,7 +102,7 @@ typedef struct sc_indexarray_i {
      * @note The IndexArray does not own the buffer - caller must manage lifetime.
      */
     indexarray (*from_buffer)(void *buffer, void *end, usize stride);
-    
+
     // Introspection
     /**
      * @brief Check if a slot is empty.
@@ -110,27 +111,27 @@ typedef struct sc_indexarray_i {
      * @return true if slot is empty, false otherwise.
      */
     bool (*is_empty_slot)(indexarray ia, usize index);
-    
+
     /**
      * @brief Get the total capacity (number of slots).
      * @param ia The IndexArray to query.
      * @return The capacity.
      */
     usize (*capacity)(indexarray ia);
-    
+
     /**
      * @brief Get the stride (element size).
      * @param ia The IndexArray to query.
      * @return The stride in bytes.
      */
     usize (*stride)(indexarray ia);
-    
+
     /**
      * @brief Clear all slots in the IndexArray.
      * @param ia The IndexArray to clear.
      */
     void (*clear)(indexarray ia);
-    
+
     /**
      * @brief Create a sparse iterator for the indexarray
      * @param ia The indexarray to iterate over

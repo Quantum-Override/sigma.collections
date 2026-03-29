@@ -27,8 +27,7 @@
 
 #include "internal/arrays.h"
 // ------------------------------
-#include <sigma.core/alloc.h>
-#include <stdlib.h>
+#include <sigma.core/allocator.h>
 #include <string.h>
 
 // allocate memory for an array bucket

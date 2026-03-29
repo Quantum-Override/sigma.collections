@@ -30,6 +30,7 @@
  */
 #pragma once
 
+#include <sigma.core/allocator.h>
 #include "collection.h"
 #include "farray.h"
 #include "list.h"
@@ -98,6 +99,11 @@ typedef struct sc_collections_i {
      * @return Version string
      */
     const char *(*version)(void);
+    /**
+     * @brief Configure the allocator used by Collections operations.
+     * @param use Pointer to sc_alloc_use_t or NULL to restore malloc/free fallback
+     */
+    void (*alloc_use)(sc_alloc_use_t *use);
 } sc_collections_i;
 extern const sc_collections_i Collections;
 
