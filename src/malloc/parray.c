@@ -5,15 +5,20 @@
  * ----------------------------------------------
  * MIT License
  * ----------------------------------------------
- * File: parray_malloc.c
+ * File: parray.c
  * Description: Standalone malloc-based pointer array implementation
+ *
+ * FEATURE PARITY REQUIREMENT:
+ * This file must stay synchronized with src/parray.c. Any features, bug fixes,
+ * or enhancements implemented in the main parray must be ported here.
+ * See docs/MALLOC_VARIANT_SYNC.md for synchronization process.
  */
 
-#include "parray_malloc.h"
+#include "malloc/parray.h"
 #include <stdlib.h>
 #include <string.h>
 
-struct sc_pointer_array_malloc {
+struct sc_pointer_array {
     usize capacity;  // Number of pointer slots allocated
     addr *data;      // Pointer to pointer storage
 };
@@ -36,7 +41,7 @@ static parray parray_new(usize capacity) {
     }
 
     // Allocate struct
-    parray arr = (parray)malloc(sizeof(struct sc_pointer_array_malloc));
+    parray arr = (parray)malloc(sizeof(struct sc_pointer_array));
     if (!arr) {
         return NULL;
     }

@@ -17,8 +17,8 @@
 #include <sigma.core/types.h>
 
 // Forward declaration of the pointer array structure
-struct sc_pointer_array_malloc;
-typedef struct sc_pointer_array_malloc *parray;
+struct sc_pointer_array;
+typedef struct sc_pointer_array *parray;
 
 /* Public interface for malloc-based pointer array operations   */
 /* ============================================================ */

@@ -43,6 +43,12 @@ declare -A PACKAGES=(
     ["collection"]="sigma.collections | arrays array_base collections list parray farray slotarray indexarray map"
 )
 
+# Malloc variant library (standalone, no sigma.memory dependency)
+MALLOC_DIR="$SRC_DIR/malloc"
+MALLOC_BUILD_DIR="$BUILD_DIR/malloc"
+MALLOC_LIB="$BUILD_DIR/sigma.arrays.a"
+MALLOC_SOURCES=("$MALLOC_DIR/farray.c" "$MALLOC_DIR/parray.c")
+
 # Build target definitions:
 declare -A BUILD_TARGETS=(
     ["all"]="compile_only"

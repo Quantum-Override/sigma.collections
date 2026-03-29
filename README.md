@@ -138,6 +138,39 @@ See [User Guide - Custom Allocation](docs/USERS_GUIDE.md#custom-allocation) for 
 - **[User Guide](docs/USERS_GUIDE.md)** - Detailed usage patterns and examples
 - **[API Reference](docs/API_REFERENCE.md)** - Complete function reference
 - **[Migration Guide v0.2.0](docs/MIGRATION_v0.2.0.md)** - Upgrading from v0.1.x
+- **[Malloc Variant Sync](docs/MALLOC_VARIANT_SYNC.md)** - Feature parity requirements for standalone malloc arrays
+
+## Malloc Variant (sigma.arrays.a)
+
+For embedded environments, profiling tools, or utilities requiring zero dependencies, sigma.collections provides a **standalone malloc variant** of FArray and PArray:
+
+```bash
+# Build standalone library
+bash build_malloc.sh
+
+# Build with tests
+bash build_malloc.sh --test
+
+# Run tests
+./build/test_arrays_malloc
+```
+
+**Key Features**:
+- Zero dependencies (direct malloc/free, no sigma.memory)
+- ABI-compatible vtable interfaces with main collections
+- Drop-in replacement via include path change only
+- Outputs: `build/sigma.arrays.a` static library
+
+**Usage**:
+```c
+#include "malloc/farray.h"  // Instead of <sigma.collections/farray.h>
+
+flex_array arr = FArray.create(100, sizeof(int));
+// Same API as main collections
+FArray.dispose(arr);
+```
+
+See [docs/sigma.arrays.a.md](docs/sigma.arrays.a.md) and [docs/MALLOC_VARIANT_SYNC.md](docs/MALLOC_VARIANT_SYNC.md) for details.
 
 ## Testing
 

@@ -3,18 +3,18 @@
  * Copyright (c) 2025 David Boarman (BadKraft) and contributors
  * QuantumOverride [Q|]
  * ----------------------------------------------
- * Standalone test suite (no sigma.test dependency)
- * Compile: gcc test/standalone/test_arrays_malloc.c -o build/test_arrays_malloc \
- *              -Iinclude -I/usr/local/include -std=c2x -Wall src/farray.c
- * src/parray.c Run: ./build/test_arrays_malloc Valgrind: valgrind --leak-check=full
- * ./build/test_arrays_malloc
+ * Malloc variant test suite (no sigma.test dependency)
+ * Compile: gcc test/malloc/test_arrays.c src/malloc/farray.c src/malloc/parray.c \
+ *              -o build/test_arrays_malloc -Iinclude -I/usr/local/include -std=c2x -Wall
+ * Run: ./build/test_arrays_malloc
+ * Valgrind: valgrind --leak-check=full ./build/test_arrays_malloc
  */
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "farray_malloc.h"
-#include "parray_malloc.h"
+#include "malloc/farray.h"
+#include "malloc/parray.h"
 
 // Test counter
 static int tests_passed = 0;
@@ -299,11 +299,5 @@ int main(void) {
     printf("Tests: %d/%d passed\n", tests_passed, tests_total);
     printf("==============================================\n");
 
-    if (tests_passed == tests_total) {
-        printf("✓ All tests passed!\n");
-        return 0;
-    } else {
-        printf("✗ Some tests failed!\n");
-        return 1;
-    }
+    return (tests_passed == tests_total) ? 0 : 1;
 }

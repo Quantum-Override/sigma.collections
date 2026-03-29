@@ -5,39 +5,44 @@
  * ----------------------------------------------
  * MIT License
  * ----------------------------------------------
- * File: farray_malloc.c
+ * File: farray.c
  * Description: Standalone malloc-based flexible array implementation
+ *
+ * FEATURE PARITY REQUIREMENT:
+ * This file must stay synchronized with src/farray.c. Any features, bug fixes,
+ * or enhancements implemented in the main farray must be ported here.
+ * See docs/MALLOC_VARIANT_SYNC.md for synchronization process.
  */
 
-#include "farray_malloc.h"
+#include "malloc/farray.h"
 #include <stdlib.h>
 #include <string.h>
 
-struct sc_flex_array_malloc {
+struct sc_flex_array {
     usize elem_size;  // Size of each element in bytes
     usize capacity;   // Number of elements allocated
     object data;      // Pointer to element storage
 };
 
 // Forward declarations
-static farray farray_malloc_new(usize capacity, usize stride);
-static void farray_malloc_init_fn(farray *arr, usize capacity, usize stride);
-static void farray_malloc_dispose_fn(farray arr);
-static int farray_malloc_capacity_fn(farray arr, usize stride);
-static void farray_malloc_clear_fn(farray arr, usize stride);
-static int farray_malloc_set_fn(farray arr, usize index, usize stride, object elem);
-static int farray_malloc_get_fn(farray arr, usize index, usize stride, object out_elem);
-static int farray_malloc_remove_fn(farray arr, usize index, usize stride);
+static farray farray_new(usize capacity, usize stride);
+static void farray_init_fn(farray *arr, usize capacity, usize stride);
+static void farray_dispose_fn(farray arr);
+static int farray_capacity_fn(farray arr, usize stride);
+static void farray_clear_fn(farray arr, usize stride);
+static int farray_set_fn(farray arr, usize index, usize stride, object elem);
+static int farray_get_fn(farray arr, usize index, usize stride, object out_elem);
+static int farray_remove_fn(farray arr, usize index, usize stride);
 
 // API implementations
 
-static farray farray_malloc_new(usize capacity, usize stride) {
+static farray farray_new(usize capacity, usize stride) {
     if (stride == 0 || capacity == 0) {
         return NULL;
     }
 
     // Allocate struct
-    farray arr = (farray)malloc(sizeof(struct sc_flex_array_malloc));
+    farray arr = (farray)malloc(sizeof(struct sc_flex_array));
     if (!arr) {
         return NULL;
     }
@@ -59,14 +64,14 @@ static farray farray_malloc_new(usize capacity, usize stride) {
     return arr;
 }
 
-static void farray_malloc_init_fn(farray *arr, usize capacity, usize stride) {
+static void farray_init_fn(farray *arr, usize capacity, usize stride) {
     if (!arr) {
         return;
     }
-    *arr = farray_malloc_new(capacity, stride);
+    *arr = farray_new(capacity, stride);
 }
 
-static void farray_malloc_dispose_fn(farray arr) {
+static void farray_dispose_fn(farray arr) {
     if (!arr) {
         return;
     }
@@ -77,12 +82,12 @@ static void farray_malloc_dispose_fn(farray arr) {
     free(arr);
 }
 
-static int farray_malloc_capacity_fn(farray arr, usize stride) {
+static int farray_capacity_fn(farray arr, usize stride) {
     (void)stride;  // Stored in struct, parameter for ABI compatibility
     return arr ? (int)arr->capacity : 0;
 }
 
-static int farray_malloc_set_fn(farray arr, usize index, usize stride, object elem) {
+static int farray_set_fn(farray arr, usize index, usize stride, object elem) {
     if (!arr || !elem || index >= arr->capacity) {
         return ERR;
     }
@@ -95,7 +100,7 @@ static int farray_malloc_set_fn(farray arr, usize index, usize stride, object el
     return OK;
 }
 
-static int farray_malloc_get_fn(farray arr, usize index, usize stride, object out_elem) {
+static int farray_get_fn(farray arr, usize index, usize stride, object out_elem) {
     if (!arr || !out_elem || index >= arr->capacity) {
         return ERR;
     }
@@ -108,7 +113,7 @@ static int farray_malloc_get_fn(farray arr, usize index, usize stride, object ou
     return OK;
 }
 
-static void farray_malloc_clear_fn(farray arr, usize stride) {
+static void farray_clear_fn(farray arr, usize stride) {
     if (!arr || !arr->data) {
         return;
     }
@@ -118,7 +123,7 @@ static void farray_malloc_clear_fn(farray arr, usize stride) {
     memset(arr->data, 0, arr->elem_size * arr->capacity);
 }
 
-static int farray_malloc_remove_fn(farray arr, usize index, usize stride) {
+static int farray_remove_fn(farray arr, usize index, usize stride) {
     if (!arr || index >= arr->capacity) {
         return ERR;
     }
@@ -132,13 +137,13 @@ static int farray_malloc_remove_fn(farray arr, usize index, usize stride) {
 }
 
 // Global interface instance
-const sc_farray_malloc_i FArray = {
-    .new = farray_malloc_new,
-    .init = farray_malloc_init_fn,
-    .dispose = farray_malloc_dispose_fn,
-    .capacity = farray_malloc_capacity_fn,
-    .clear = farray_malloc_clear_fn,
-    .set = farray_malloc_set_fn,
-    .get = farray_malloc_get_fn,
-    .remove = farray_malloc_remove_fn,
+const sc_farray_i FArray = {
+    .new = farray_new,
+    .init = farray_init_fn,
+    .dispose = farray_dispose_fn,
+    .capacity = farray_capacity_fn,
+    .clear = farray_clear_fn,
+    .set = farray_set_fn,
+    .get = farray_get_fn,
+    .remove = farray_remove_fn,
 };
