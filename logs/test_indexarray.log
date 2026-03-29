@@ -1,20 +1,21 @@
-[2] core_indexarray_set       :   16 : 2026-03-21  23:45:03                     
+Test Source: test/unit/test_indexarray.c
+[2] core_indexarray_set       :   16 : 2026-03-27  19:51:35                     
 ================================================================================
-Running: indexarray_creation                                     4.162 ms [PASS]
-Running: indexarray_dispose                                      1.942 ms [PASS]
-Running: indexarray_add_value                                    2.352 ms [PASS]
-Running: indexarray_get_at                                       1.748 ms [PASS]
-Running: indexarray_remove_at                                    1.779 ms [PASS]
-Running: indexarray_is_empty_slot                                1.956 ms [PASS]
-Running: indexarray_capacity                                     1.587 ms [PASS]
-Running: indexarray_clear                                        2.004 ms [PASS]
-Running: indexarray_slot_reuse                                   1.948 ms [PASS]
-Running: indexarray_growth                                       2.227 ms [PASS]
-Running: indexarray_from_farray                                  3.333 ms [PASS]
-Running: indexarray_from_buffer                                  2.100 ms [PASS]
-Running: indexarray_create_iterator                              1.689 ms [PASS]
-Running: indexarray_iterator_empty                               1.862 ms [PASS]
-Running: indexarray_iterator_sparse                              2.369 ms [PASS]
-Running: indexarray_iterator_full                                2.449 ms [PASS]
+Running: indexarray_creation                                   14.613 µs [PASS]
+Running: indexarray_dispose                                     8.386 µs [PASS]
+Running: indexarray_add_value                                   8.917 µs [PASS]
+Running: indexarray_get_at                                      8.481 µs [PASS]
+Running: indexarray_remove_at                                   8.610 µs [PASS]
+Running: indexarray_is_empty_slot                               8.937 µs [PASS]
+Running: indexarray_capacity                                    7.956 µs [PASS]
+Running: indexarray_clear                                       8.894 µs [PASS]
+Running: indexarray_slot_reuse                                  9.540 µs [PASS]
+Running: indexarray_growth                                     10.611 µs [PASS]
+Running: indexarray_from_farray                                21.940 µs [PASS]
+Running: indexarray_from_buffer                                 7.046 µs [PASS]
+Running: indexarray_create_iterator                            10.688 µs [PASS]
+Running: indexarray_iterator_empty                             10.685 µs [PASS]
+Running: indexarray_iterator_sparse                            10.899 µs [PASS]
+Running: indexarray_iterator_full                              11.950 µs [PASS]
 ================================================================================
 [2]     TESTS= 16        PASS= 16        FAIL=  0        SKIP=  0

@@ -1,31 +1,30 @@
-[2] core_farray_set           :   13 : 2026-03-21  23:45:03                     
+Test Source: test/unit/test_farray.c
+[2] core_farray_set           :   13 : 2026-03-27  19:51:35                     
 ================================================================================
-Running: farray_creation                                         4.211 ms [PASS]
-Running: farray_init_from_null                                   2.127 ms [PASS]
-Running: farray_init_from_existing                               1.811 ms [PASS]
-Running: farray_get_capacity                                     2.084 ms [PASS]
-Running: farray_clear                                            2.284 ms [PASS]
-Running: farray_set_value                        
-  - 	Stored value at index 0: exp: 1  act: 1
+Running: farray_creation                                       23.551 µs [PASS]
+Running: farray_init_from_null                                  6.175 µs [PASS]
+Running: farray_init_from_existing                              7.902 µs [PASS]
+Running: farray_get_capacity                                    6.422 µs [PASS]
+Running: farray_clear                                           6.503 µs [PASS]
+Running: farray_set_value                          - 	Stored value at index 0: exp: 1  act: 1
   - 	Stored value at index 1: exp: 2  act: 2
   - 	Stored value at index 2: exp: 3  act: 3
   - 	Stored value at index 3: exp: 4  act: 4
   - 	Stored value at index 4: exp: 5  act: 5
 
-                                                                10.362 ms [PASS]
-Running: farray_get_value                        
-  - 	Retrieved value at index 0: exp: 10  act: 10
+                                                                7.496 µs [PASS]
+Running: farray_get_value                          - 	Retrieved value at index 0: exp: 10  act: 10
   - 	Retrieved value at index 1: exp: 20  act: 20
   - 	Retrieved value at index 2: exp: 30  act: 30
   - 	Retrieved value at index 3: exp: 40  act: 40
   - 	Retrieved value at index 4: exp: 50  act: 50
 
-                                                                 9.308 ms [PASS]
-Running: farray_remove_at                                        2.091 ms [PASS]
-Running: farray_as_collection                                    2.875 ms [PASS]
-Running: farray_to_collection                                    2.056 ms [PASS]
-Running: farray_set_out_of_bounds                                1.673 ms [PASS]
-Running: farray_get_out_of_bounds                                1.612 ms [PASS]
-Running: farray_remove_out_of_bounds                             1.634 ms [PASS]
+                                                                7.692 µs [PASS]
+Running: farray_remove_at                                       6.320 µs [PASS]
+Running: farray_as_collection                                   8.283 µs [PASS]
+Running: farray_to_collection                                   9.440 µs [PASS]
+Running: farray_set_out_of_bounds                               6.068 µs [PASS]
+Running: farray_get_out_of_bounds                               5.942 µs [PASS]
+Running: farray_remove_out_of_bounds                            5.919 µs [PASS]
 ================================================================================
 [2]     TESTS= 13        PASS= 13        FAIL=  0        SKIP=  0

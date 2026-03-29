@@ -1,6 +1,7 @@
-[2] collections_allocator_set :    2 : 2026-03-21  23:45:02                     
+Test Source: test/unit/test_collections_allocator.c
+[2] collections_allocator_set :    2 : 2026-03-27  19:51:35                     
 ================================================================================
-Running: list_with_allocator                                     6.823 ms [PASS]
-Running: farray_with_allocator                                   3.380 ms [PASS]
+Running: list_with_allocator                                    8.721 µs [PASS]
+Running: farray_with_allocator                                  7.096 µs [PASS]
 ================================================================================
 [2]     TESTS=  2        PASS=  2        FAIL=  0        SKIP=  0
