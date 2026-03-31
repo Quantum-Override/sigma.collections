@@ -4,8 +4,8 @@
 **Type:** Feature Request  
 **Owner:** sigma.collections  
 **Filed:** 2026-03-21  
-**Status:** open  
-**Depends-on:** [FR-2603-sigma-collections-001](FR-2603-sigma-collections-001.md) — alloc_use seam must land first  
+**Status:** resolved  
+**Resolved:** 2026-03-31  
 **Tags:** sigma-collections, map, hash-map, allocator, alloc-use, anvil  
 
 ---
@@ -198,3 +198,134 @@ Once `Map` is available, the following will be replaced:
   remove ~90 lines of hash table boilerplate from the resolver on adoption.
 - **Blocking milestone:** Anvil v1.0.0-rel (E3 is a post-v1.0 enhancement, but Map is useful
   now; resolver cleanup can happen immediately after `alloc_use` lands).
+
+---
+
+## Resolution
+
+**Resolved:** 2026-03-31  
+**Commit:** Implemented in v0.2.0-rc2 (2026-03-21-25), included in v0.2.1 (2026-03-27)
+
+### Implementation Summary
+
+Map collection fully implemented with all requested features. Uses `Allocator.alloc/dispose` directly (not alloc_use hooks, as FR-001 was never implemented and later marked obsolete).
+
+### Deliverables
+
+**Source Implementation** ([src/map.c](../src/map.c)):
+- FNV-1a 64-bit hashing with standard prime/offset constants
+- Open addressing with linear probing collision resolution
+- Load factor threshold 0.5 (auto-resize at 50% capacity)
+- Automatic resize to next power of two
+- Tombstone marking for deleted entries (prevents probe chain breakage)
+- Entry structure: `{ uint64_t hash, char *key, usize key_len, usize value, bool occupied }`
+
+**Public Interface** ([include/map.h](../include/map.h)):
+```c
+typedef struct sc_map_i {
+    map  (*new)(usize capacity);
+    void (*init)(map *, usize capacity);
+    void (*dispose)(map);
+    int  (*set)(map, const char *key, usize len, usize val);
+    int  (*get)(map, const char *key, usize len, usize *out_val);
+    int  (*has)(map, const char *key, usize len);
+    int  (*remove)(map, const char *key, usize len);
+    usize (*count)(map);
+    usize (*capacity)(map);
+    sparse_iterator (*create_iterator)(map);
+} sc_map_i;
+extern const sc_map_i Map;
+```
+
+**Sparse Iterator Support:**
+- `Map.create_iterator()` → returns sparse_iterator over occupied entries only
+- Iterator yields `map_entry *` with `{ char *key, usize key_len, usize value }`
+- Compatible with `SparseIterator.next/current_value/dispose` interface
+
+**Test Coverage** ([test/unit/test_map.c](../test/unit/test_map.c)):
+- **17 comprehensive tests**, all passing:
+  1. `map_new_dispose` - Lifecycle, capacity initialization
+  2. `map_set_get_single` - Single entry set/get
+  3. `map_set_multiple` - Multiple distinct keys
+  4. `map_update_existing_key` - Value updates
+  5. `map_get_nonexistent` - Missing key handling
+  6. `map_has` - Presence checking
+  7. `map_remove` - Entry removal
+  8. `map_remove_nonexistent` - Remove missing key (no-op)
+  9. `map_remove_and_reinsert` - Tombstone reuse
+  10. `map_automatic_resize` - Load factor triggering
+  11. `map_large_insertion` - 100+ entries, stress test
+  12. `map_empty_key` - Zero-length keys
+  13. `map_key_with_nulls` - Binary keys (embedded NULs)
+  14. `map_collision_handling` - Linear probing verification
+  15. `map_null_safety` - NULL pointer guards
+  16. `map_arena_pattern` - Usage with bump allocators
+  17. `map_iterate_keys_values` - Sparse iterator functionality
+
+### Allocation Architecture
+
+**Implementation Uses Allocator.alloc (Not alloc_use):**
+- Map uses `Allocator.alloc()` / `Allocator.dispose()` from sigma.memory facade
+- Allocator delegates through `Application.get_allocator()` (Phase 2 complete)
+- Test frameworks inject custom allocators via `Application.set_allocator()` globally
+- **No per-module alloc_use hooks** - Application-level allocator sufficient
+
+**Dependency Note:**
+Original FR requested dependency on FR-001 (alloc_use seam). FR-001 marked obsolete 2026-03-31. Map implementation uses superior Application allocator architecture from Phase 2.
+
+**Arena/Frame Allocation:**
+Custom controllers (reclaim, frame, etc.) designed into Application allocator. Map automatically benefits from Application-level allocator control without per-instance configuration.
+
+### Acceptance Criteria
+
+- [x] FNV-1a 64-bit hashing implemented ✓
+- [x] Open addressing with linear probing ✓
+- [x] Load factor 0.5, auto-resize to next power of 2 ✓
+- [x] String keys with explicit length (binary-safe) ✓
+- [x] Set/get/has/remove operations ✓
+- [x] Count/capacity accessors ✓
+- [x] Sparse iterator support (iterate occupied entries only) ✓
+- [x] Comprehensive test coverage (17/17 tests passing) ✓
+- [x] Included in v0.2.1 release ✓
+
+### Usage Example
+
+```c
+#include <sigma.collections/map.h>
+
+map m = Map.new(16);  // Initial capacity 16
+
+// Insert entries
+Map.set(m, "username", 8, (usize)user_ptr);
+Map.set(m, "user_id", 7, 12345);
+
+// Retrieve
+usize value;
+if (Map.get(m, "username", 8, &value)) {
+    user_t *user = (user_t *)value;
+}
+
+// Check existence
+if (Map.has(m, "user_id", 7)) {
+    Map.remove(m, "user_id", 7);
+}
+
+// Iterate
+sparse_iterator it = Map.create_iterator(m);
+while (SparseIterator.next(it)) {
+    map_entry *entry;
+    SparseIterator.current_value(it, (object *)&entry);
+    // Access entry->key, entry->key_len, entry->value
+}
+SparseIterator.dispose(it);
+Map.dispose(m);
+```
+
+### Next Actions
+
+- [x] Map implementation complete and tested
+- [ ] Anvil integration: Replace `anvl_id_map_t` with `Map` in resolver.c
+- [ ] Anvil integration: Replace linear scans in import.c and schema.c with `Map`
+- [ ] E3 query path: Use `Map` for `Context.get_field_by_name` implementation
+
+Map is production-ready and available in sigma.collections v0.2.1+.

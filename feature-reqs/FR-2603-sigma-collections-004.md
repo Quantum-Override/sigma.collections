@@ -4,7 +4,8 @@
 **Type:** Feature Request  
 **Owner:** sigma.collections  
 **Filed:** 2026-03-27  
-**Status:** open  
+**Status:** obsolete  
+**Closed:** 2026-03-31  
 **Tags:** sigma-collections, allocator, refactor, phase-3a, orchestration, BR-2603-q-or-001  
 **Depends on:** FR-2603-sigma-collections-003 (alloc_use pattern removal)  
 **Blocks:** None (optimization/cleanup)  
@@ -241,3 +242,65 @@ Maximum simplicity — matches sigma.core pattern, removes unnecessary indirecti
 - **FR-2603-sigma-collections-003** — Remove alloc_use pattern (prerequisite)
 - **BR-2603-sigma-core-003** — sigma.core facade removal (precedent for direct calls)
 - **ORCHESTRATION-BR-2603-q-or-001.md** — Phase 3A specifications
+
+---
+
+## Resolution
+
+**Obsolete:** 2026-03-31  
+**Reason:** Dispatch helpers never existed in codebase
+
+### Investigation Summary
+
+FR-004 requested updating dispatch helper functions (`coll_alloc`, `coll_free`, `coll_realloc`) after removing the alloc_use pattern. However, **these dispatch helpers were never implemented in sigma.collections**.
+
+**Actual Implementation (v0.2.1):**
+- No `coll_alloc()` function exists
+- No `coll_free()` function exists
+- No `coll_realloc()` function exists
+- No `s_coll_use` global variable exists
+
+**What Actually Exists:**
+- 17 direct call sites using `Allocator.alloc()` / `Allocator.dispose()` across all collection implementations:
+  - src/collections.c: 4 calls
+  - src/arrays.c: 2 calls
+  - src/list.c: 1 call
+  - src/map.c: 1 call
+  - src/parray.c: 1 call
+  - src/farray.c: 1 call
+  - src/indexarray.c: 4 calls
+  - src/slotarray.c: 3 calls
+
+**Conclusion:**
+The codebase already follows "Option B - Inline Completely" from this FR's recommendations. All allocations use the Allocator facade directly, no dispatch layer exists.
+
+### What FR-003 Actually Did
+
+FR-003 removed the **only vestigial artifact** from the alloc_use pattern:
+- Removed `void (*alloc_use)(sc_alloc_use_t *use);` vtable slot from `sc_collections_i` interface
+- This slot had no implementation and no callers
+
+No dispatch helpers existed to update.
+
+### Current Architecture (Confirmed 2026-03-31)
+
+**Allocation Path:**
+1. Collections call `Allocator.alloc()` / `Allocator.dispose()` directly ✓
+2. Allocator facade delegates through `Application.get_allocator()` ✓
+3. Application returns custom allocator OR default SLB0 controller ✓
+4. No intermediate dispatch layer ✓
+
+**Benefits:**
+- Simpler code (17 direct calls instead of dispatch helpers)
+- Better performance (no branch overhead)
+- Consistent pattern across all collections
+- Already achieved without additional work
+
+### Related Work
+
+**FR-001:** Obsolete - alloc_use pattern never fully implemented  
+**FR-002:** Resolved - Map collection complete with 17 tests  
+**FR-003:** Resolved - removed vestigial alloc_use vtable slot  
+**FR-004:** Obsolete - dispatch helpers never existed
+
+**Phase 3A Complete:** Architectural simplification finished, all collections use Allocator facade directly

@@ -5,7 +5,8 @@
 **Owner:** sigma.collections  
 **Co-change:** sigma.test  
 **Filed:** 2026-03-21  
-**Status:** open  
+**Status:** obsolete  
+**Closed:** 2026-03-31  
 **Tags:** sigma-collections, sigma-test, allocator, alloc-use, testing  
 
 ---
@@ -162,3 +163,62 @@ produced by sigma.test's existing summary machinery.
   seam, not just collections. This is a reusable pattern.
 - Groundwork for FR-2603-sigma-test-001 (sandboxed controller) — the `alloc_use` slot is the
   same connection point; only the provider changes.
+
+---
+
+## Resolution
+
+**Closed:** 2026-03-31  
+**Status:** Obsolete
+
+### Decision
+
+This FR is **obsolete** and will not be implemented. The requested `alloc_use` pattern was never fully implemented in sigma.collections, and the project architecture evolved in a different direction.
+
+### What Happened
+
+**Timeline:**
+- **2026-03-21**: FR-001 filed requesting `alloc_use` pattern with module-level hooks
+- **2026-03-21-25**: v0.2.0-rc2 partially implemented alloc_use pattern
+- **2026-03-27**: v0.2.1 **removed** alloc_use pattern, reverted to Allocator.alloc/dispose facade from sigma.memory
+- **2026-03-26-29**: Phase 1 & 2 completed Application allocator API (FR-2603-sigma-memory-002), providing superior global allocation control
+- **2026-03-31**: FR-001 marked obsolete - per-module allocator hooks no longer wanted
+
+**Current Architecture (v0.2.1):**
+- sigma.collections uses `Allocator.alloc()` / `Allocator.dispose()` directly (17 call sites)
+- Allocator facade delegates through `Application.get_allocator()` (Phase 2 complete)
+- Test frameworks inject custom allocators via `Application.set_allocator()` globally
+- **No per-module allocator hooks** - Application-level allocator sufficient for all use cases
+
+### Why alloc_use Pattern Not Needed
+
+**1. Application Allocator Provides Better Solution:**
+- `Application.set_allocator()` controls allocations across **all modules** (sigma.collections, sigma.memory controllers, sigma.core String/StringBuilder, etc.)
+- Set once at initialization, affects everything
+- No per-module wiring required
+
+**2. Test Framework Integration:**
+- sigma.test can inject `tracked_malloc/free` via `Application.set_allocator()` globally
+- Tracks allocations from **all libraries**, not just collections
+- Simpler than per-module `alloc_use` wiring
+
+**3. Architectural Simplicity:**
+- Fewer concepts (one global allocator vs many module hooks)
+- Fewer call sites to maintain
+- No dispatch helpers or module-level state
+
+**4. sigma.core Precedent:**
+- BR-2603-sigma-core-003 removed equivalent alloc_use pattern from sigma.core during Phase 1
+- Simplified String/StringBuilder to direct Allocator.* calls
+- sigma.collections following same pattern
+
+### Recommendations
+
+**For test frameworks needing allocation tracking:**
+Use `Application.set_allocator()` with custom allocator provider. See FR-2603-sigma-memory-002 for use cases and test patterns.
+
+**For arena/frame allocation:**
+Custom controllers (reclaim, frame, etc.) are designed into Application allocator architecture. No per-module hooks needed.
+
+**For minimal builds:**
+Use malloc variant static libraries (sigma.arrays.a, sigma.string.a from Phase 0) - zero sigma.memory dependency, direct malloc/free.

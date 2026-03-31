@@ -4,7 +4,8 @@
 **Type:** Feature Request  
 **Owner:** sigma.collections  
 **Filed:** 2026-03-27  
-**Status:** open  
+**Status:** resolved  
+**Resolved:** 2026-03-31  
 **Tags:** sigma-collections, allocator, alloc-use, phase-3a, orchestration, BR-2603-q-or-001  
 **Depends on:** FR-2603-sigma-core-005 (sc_alloc_use_t.ctrl field), FR-2603-sigma-memory-002 (Application delegation)  
 
@@ -274,3 +275,81 @@ FArray.destroy(arr);
 - **BR-2603-sigma-core-003** — sigma.core facade removal precedent
 - **FR-2603-sigma-memory-002** — Application delegation in Allocator facade
 - **ORCHESTRATION-BR-2603-q-or-001.md** — Phase 3A specifications
+
+---
+
+## Resolution
+
+**Resolved:** 2026-03-31  
+**Commit:** fix/fr-cleanup-phase3a (2026-03-31)
+
+### Implementation Summary
+
+alloc_use pattern removal **95% complete in v0.2.1**, only vestigial vtable slot remained. Final cleanup completed in Phase 3A.
+
+### What Was Already Done (v0.2.1)
+
+**No Module-Level Hooks:**
+- `static sc_alloc_use_t *s_coll_use` — **Never existed in codebase**
+- `coll_set_alloc_use()` function — **Never implemented**
+- Dispatch helpers (coll_alloc/coll_free/coll_realloc) — **Never existed**
+
+**Direct Allocator Calls:**
+- 17 call sites across all collections already use `Allocator.alloc()` / `Allocator.dispose()` directly
+- src/collections.c (4 calls)
+- src/arrays.c (2 calls)
+- src/list.c (1 call)
+- src/map.c (1 call)
+- src/parray.c (1 call)
+- src/farray.c (1 call)
+- src/indexarray.c (4 calls)
+- src/slotarray.c (3 calls)
+
+**Conclusion:** FR description requested removing infrastructure that was never implemented. v0.2.1 already followed the "Option B - Inline Completely" pattern.
+
+### What Remained (Fixed 2026-03-31)
+
+**Single Vestigial Artifact:**
+- `void (*alloc_use)(sc_alloc_use_t *use);` vtable slot in `sc_collections_i` interface (include/collections.h line 106)
+- Same slot in package/include/collections.h
+- **No implementation** - slot never wired to any function
+- **No callers** - no code used Collections.alloc_use()
+
+**Fix Applied:**
+- Removed alloc_use vtable slot from sc_collections_i in both headers
+- Verified no references remain: `grep -r "\.alloc_use\|->alloc_use" src/` → empty
+- Build clean, all tests passing
+
+### Current Architecture (v0.2.1+)
+
+**Allocation Path:**
+1. Collections call `Allocator.alloc()` / `Allocator.dispose()` directly
+2. Allocator facade delegates through `Application.get_allocator()` (Phase 2 complete)
+3. Application returns custom allocator OR default SLB0 controller
+4. Controller handles actual allocation (slab, frame, reclaim, etc.)
+
+**No Per-Module Hooks:**
+- Collections do NOT have module-level allocator override
+- Application.set_allocator() controls allocations across ALL modules
+- Simpler, more consistent, better performance (no dispatch branches)
+
+### Acceptance Criteria
+
+- [x] No `s_coll_use` globals in any source file ✓ (never existed)
+- [x] No `coll_set_alloc_use()` function in any source file ✓ (never implemented)
+- [x] No `.alloc_use` vtable entries in collection interfaces ✓ (removed 2026-03-31)
+- [x] All allocations use Allocator.alloc/dispose directly ✓ (17 call sites confirmed)
+- [x] sigma.collections test suite passes ✓ (102 tests, no regressions)
+- [x] Documentation accurate ✓ (FR-001 marked obsolete, FR-002/003 resolved)
+
+### Related Work
+
+**FR-001 (alloc_use seam):** Marked obsolete 2026-03-31 - requested pattern never implemented, architecture went different direction
+
+**FR-002 (Map collection):** Resolved 2026-03-31 - Map implemented in v0.2.0-rc2 using Allocator.alloc (not alloc_use)
+
+**FR-004 (Update dispatch helpers):** Marked obsolete 2026-03-31 - no dispatch helpers exist to update
+
+**Phase 2 Complete:** FR-2603-sigma-memory-002 (Application allocator delegation) completed, unblocked Phase 3A
+
+**Phase 3A Complete:** Simple 2-line code change (remove vtable slot), comprehensive FR documentation updates, all tests passing
