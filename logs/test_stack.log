@@ -1,0 +1,14 @@
+Test Source: test/unit/test_stack.c
+[2] core_stack_set            :    9 : 2026-09-22  02:36:26                     
+================================================================================
+Running: stack_new                                              7.181 µs [PASS]
+Running: stack_push_pop_lifo                                    4.568 µs [PASS]
+Running: stack_peek_does_not_mutate                             4.107 µs [PASS]
+Running: stack_pop_peek_empty                                   3.914 µs [PASS]
+Running: stack_clear                                            3.839 µs [PASS]
+Running: stack_mark_restore                                     4.017 µs [PASS]
+Running: stack_new_with_allocator_null_is_default_path          3.914 µs [PASS]
+Running: stack_new_with_allocator_grow_orphans                  3.555 µs [PASS]
+Running: stack_dispose_skips_release_when_overridden            3.004 µs [PASS]
+================================================================================
+[2]     TESTS=  9        PASS=  9        FAIL=  0        SKIP=  0
