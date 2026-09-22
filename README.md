@@ -2,16 +2,18 @@
 
 High-performance C collection library providing unified interfaces for array-based data structures with support for both dense and sparse collections.
 
-**Version**: 0.2.1  
+**Version**: 0.3.0  
 **License**: BSD-3-Clause
 
 ## Features
 
-- **Dense Collections**: FArray, PArray, List
+- **Dense Collections**: FArray, PArray, List, Stack (LIFO)
 - **Sparse Collections**: SlotArray (pointer-based), IndexArray (value-based)
 - **Hash Map**: Map (string-keyed hash map with FNV-1a hashing)
+- **Heapless Query**: `Query.next`/`Query.first` — zero-allocation scan/find-first over FArray, PArray, Collection, List, SlotArray, and Map, via each type's `as_queryable` (v0.3.0+)
 - **Iterators**: Standard Iterator and SparseIterator for unified traversal
-- **Dynamic Growth**: Automatic resizing for List, IndexArray, and Map
+- **Dynamic Growth**: Automatic resizing for List, Stack, IndexArray, and Map
+- **Per-Instance Allocator Override**: bind one Collection/List/Stack instance to its own arena, independent of every other instance (v0.3.0+)
 - **Buffer Views**: Non-owning views from pre-allocated memory
 - **Memory Efficient**: Cache-friendly contiguous layouts
 - **Memory Management**: Uses Allocator facade from sigma.memory (v0.2.1+)
@@ -95,6 +97,71 @@ SparseIterator.dispose(it);
 Map.dispose(m);
 ```
 
+### LIFO Stack
+
+```c
+#include <sigma.collections/stack.h>
+
+stack s = Stack.new(16);
+
+int a = 1, b = 2;
+Stack.push(s, &a);
+Stack.push(s, &b);
+
+object top = Stack.pop(s);  // &b — last in, first out
+
+// Save-point / rollback: mark the current depth, restore to discard
+// everything pushed after it (O(1), no allocation)
+usize checkpoint = Stack.mark(s);
+Stack.push(s, &a);
+Stack.restore(s, checkpoint);  // a's push is discarded
+
+Stack.dispose(s);
+```
+
+### Heapless Query (v0.3.0+)
+
+`Query.next`/`Query.first` scan any collection type — FArray, PArray, Collection, List, SlotArray, Map — via a small POD cursor each type produces through its own `as_queryable`. Nothing here allocates: no iterator object to create or dispose, just for the common case of a one-shot scan or "find the first match."
+
+```c
+#include <sigma.collections/query.h>
+#include <sigma.collections/farray.h>
+
+farray arr = FArray.new(4, sizeof(int));
+int values[] = {10, 20, 30, 40};
+for (int i = 0; i < 4; i++) FArray.set(arr, i, sizeof(int), &values[i]);
+
+// Roll your own scan loop:
+sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+const void *elem;
+long sum = 0;
+while (Query.next(&q, &elem, NULL)) {
+    sum += *(const int *)elem;
+}
+
+// Or find the first match in one call:
+bool is_30(const void *element, usize index, void *userdata) {
+    return *(const int *)element == 30;
+}
+usize idx;
+if (Query.first(FArray.as_queryable(arr, sizeof(int)), is_30, NULL, &idx)) {
+    printf("found 30 at index %zu\n", idx);
+}
+
+FArray.dispose(arr);
+```
+
+Map goes one step further — `Map.as_queryable` can find an entry **by value**, something `Map.get` (key-only lookup) can't do, and `Map.keys`/`Map.values` scan just one half of the pair:
+
+```c
+bool value_is_3(const void *element, usize index, void *userdata) {
+    return ((const map_entry *)element)->value == 3;
+}
+Query.first(Map.as_queryable(m), value_is_3, NULL, NULL);
+```
+
+**Important**: an `sc_queryable` is a live view into its source, not a snapshot — don't mutate the source (add/remove/set/clear/grow) while a queryable over it is still in use. See [API Reference — Query](docs/API_REFERENCE.md#query) for the full contract, and [Collections Overview — Query Support](docs/COLLECTIONS_OVERVIEW.md#query-support) for when to reach for `Query` versus `Iterator`.
+
 ### Working with Pre-allocated Buffers
 
 ```c
@@ -108,27 +175,26 @@ IndexArray.dispose(ia);  // View disposed, buffer remains valid
 free(buffer);
 ```
 
-### Custom Allocation (v0.2.0+)
+### Custom Allocation (v0.3.0+)
 
-Wire in custom allocators for testing or specialized memory management:
+By default, every collection allocates through the global `Allocator`/`Application` facade (from sigma.memory) — there's no module-wide way to swap that out. Instead, Collection/List/Stack support a **per-instance** override: bind one instance to its own `sc_alloc_use_t *` via `create_with_allocator`/`new_with_allocator`, leaving every other instance (and every other type — FArray, PArray, SlotArray, Map) on the default path. This is what lets two collections be alive at once, bound to two *different* allocators — e.g. a parse-scoped bump arena versus a longer-lived, document-scoped one:
 
 ```c
-#include <sigtest/sigtest.h>
+#include <sigma.collections/list.h>
 
-static void register_tests(void) {
-    // Track all collection allocations
-    Collections.alloc_use(sigtest_alloc_use());
-    
-    testset("my_tests", NULL, NULL);
-    testcase("test_no_leaks", test_lifecycle);
-}
+sc_alloc_use_t parse_arena_use = { .alloc = arena_alloc, .release = arena_release, /* ... */ };
 
-static void test_lifecycle(void) {
-    indexarray ia = IndexArray.new(100, sizeof(int));
-    IndexArray.dispose(ia);
-    // Test framework reports: Total mallocs: 1, Total frees: 1
-}
+// Bound to the arena instead of the global Allocator; every other List
+// you create is unaffected and still uses the default path.
+list scratch = List.new_with_allocator(16, sizeof(node *), &parse_arena_use);
+
+// Growth allocates through parse_arena_use and orphans (not frees) the old
+// buffer — a bump/arena allocator can't free one specific prior allocation,
+// only bulk-release the whole arena. List.dispose(scratch) likewise skips
+// freeing the buffer; the arena reclaims it in one shot when it's released.
 ```
+
+`NULL` in place of `use` is always a plain pass-through to the ordinary constructor (`List.new`, `Stack.new`, `Collections.create_view`-style construction) — every caller that doesn't opt in is unaffected.
 
 See [User Guide - Custom Allocation](docs/USERS_GUIDE.md#custom-allocation) for details.
 
@@ -186,7 +252,7 @@ ctest indexarray
 ctest indexarray --valgrind
 ```
 
-**Test Coverage**: 102 total tests - 17 Map, 17 SlotArray, 16 IndexArray, 23 List, 13 FArray, 13 PArray, and more - all passing
+**Test Coverage**: 141 registered test cases - 28 List, 21 Map, 19 SlotArray, 16 FArray, 16 IndexArray, 15 PArray, 9 Stack, 8 Query, 6 Collections, and more
 
 ## Directory Structure
 

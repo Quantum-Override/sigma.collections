@@ -36,7 +36,7 @@
 #include <string.h>
 #include "internal/array_base.h"
 
-#define COLLECTIONS_VERSION "1.2.0"
+#define COLLECTIONS_VERSION "1.3.0"
 
 // Forward declarations of array structs for internal use
 // Note: Now using unified sc_array_base from array_base.h

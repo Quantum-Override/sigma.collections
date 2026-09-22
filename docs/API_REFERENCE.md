@@ -7,11 +7,13 @@ Complete function reference for sigma.collections library.
 - [FArray](#farray)
 - [PArray](#parray)
 - [List](#list)
+- [Stack](#stack)
 - [SlotArray](#slotarray)
 - [IndexArray](#indexarray)
 - [Map](#map)
 - [Iterator](#iterator)
 - [SparseIterator](#sparseiterator)
+- [Query](#query)
 - [Collections](#collections)
 
 ---
@@ -154,23 +156,27 @@ Create non-owning collection view.
 
 ---
 
-#### `FArray.alloc_use`
+#### `FArray.as_queryable`
 ```c
-void FArray.alloc_use(sc_alloc_use_t *use);
+sc_queryable FArray.as_queryable(farray arr, usize stride);
 ```
-Set custom allocator for all collections.
+Produce a heapless queryable over the array's elements, for use with [`Query.next`/`Query.first`](#query). No allocation — no collection view is created.
 
 **Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+- `arr` - Array to query
+- `stride` - Element size
 
-**Notes**:
-- Sets module-level allocator affecting all collection types
-- See [Custom Allocation](#custom-allocation) section for details
-- Pass NULL to restore default malloc/free behavior
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not mutate `arr` while the returned queryable is in use — see [Query](#query)'s invariant note.
 
 **Example**:
 ```c
-Collections.alloc_use(sigtest_alloc_use());  // Route to test framework
+sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+usize idx;
+if (Query.first(q, is_the_value_im_after, NULL, &idx)) {
+    printf("found at index %zu\n", idx);
+}
 ```
 
 ---
@@ -254,16 +260,18 @@ Create non-owning slotarray view.
 
 ---
 
-#### `PArray.alloc_use`
+#### `PArray.as_queryable`
 ```c
-void PArray.alloc_use(sc_alloc_use_t *use);
+sc_queryable PArray.as_queryable(parray arr);
 ```
-Set custom allocator for all collections.
+Produce a heapless queryable over the array's elements, for use with [`Query.next`/`Query.first`](#query). Yields `const addr *` per element.
 
 **Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+- `arr` - Array to query
 
-**Notes**: Sets module-level allocator shared by all collection types.
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not mutate `arr` while the returned queryable is in use — see [Query](#query)'s invariant note.
 
 ---
 
@@ -286,6 +294,33 @@ Create a new list.
 - `stride` - Element size
 
 **Returns**: New list or NULL on failure
+
+---
+
+#### `List.new_with_allocator`
+```c
+list List.new_with_allocator(usize capacity, usize elem_size, sc_alloc_use_t *use);
+```
+Create a new list bound to a caller-supplied allocator-use. The instance grows/orphans through `use` instead of the global Allocator/Application facade.
+
+**Parameters**:
+- `capacity` - Initial list capacity
+- `elem_size` - Size of each element in the list
+- `use` - Allocator-use to bind this instance to, or `NULL` to behave exactly like `List.new`
+
+**Returns**: New list instance, or NULL on failure
+
+**Notes**:
+- `NULL` is a plain pass-through to `List.new` — every existing caller is unaffected.
+- When bound, growth allocates through `use->alloc` and **orphans** (does not free) the previous buffer — a bump/arena allocator has no way to free one specific prior allocation, only bulk-release the whole arena.
+- `List.dispose` on a bound instance likewise skips freeing the buffer; the bound allocator owns reclaiming it.
+
+**Example**:
+```c
+// A parse-scoped bump arena; every list bound to it is reclaimed in one
+// shot when the parse finishes, no per-list dispose bookkeeping needed.
+list scratch = List.new_with_allocator(16, sizeof(node *), &parse_arena_use);
+```
 
 ---
 
@@ -360,16 +395,154 @@ Get current capacity.
 
 ---
 
-#### `List.alloc_use`
+#### `List.as_queryable`
 ```c
-void List.alloc_use(sc_alloc_use_t *use);
+sc_queryable List.as_queryable(list lst);
 ```
-Set custom allocator for all collections.
+Produce a heapless queryable over the list's elements, for use with [`Query.next`/`Query.first`](#query). Delegates to `Collections.as_queryable` — List owns no storage of its own.
 
 **Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+- `lst` - List to query
 
-**Notes**: Sets module-level allocator shared by all collection types.
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not mutate `lst` while the returned queryable is in use — see [Query](#query)'s invariant note.
+
+---
+
+## Stack
+
+**Header**: `<sigma.collections/stack.h>`
+
+LIFO collection composed over [Collection](#collections) — the same relationship List has to it. `push`/`pop`/`peek`/`clear` are thin wrappers over the underlying collection's add/length operations, so Stack inherits arena-aware growth for free via `new_with_allocator`.
+
+### Functions
+
+#### `Stack.new`
+```c
+stack Stack.new(usize capacity);
+```
+Create a new stack.
+
+**Parameters**:
+- `capacity` - Initial stack capacity
+
+**Returns**: New stack or NULL on failure
+
+---
+
+#### `Stack.new_with_allocator`
+```c
+stack Stack.new_with_allocator(usize capacity, sc_alloc_use_t *use);
+```
+Create a new stack bound to a caller-supplied allocator-use. Same allocator-override semantics as [`List.new_with_allocator`](#list) — `NULL` behaves exactly like `Stack.new`; a bound instance grows through `use` and orphans (rather than frees) old buffers.
+
+**Parameters**:
+- `capacity` - Initial stack capacity
+- `use` - Allocator-use to bind this instance to, or `NULL`
+
+**Returns**: New stack instance, or NULL on failure
+
+---
+
+#### `Stack.dispose`
+```c
+void Stack.dispose(stack s);
+```
+Dispose of stack.
+
+---
+
+#### `Stack.push`
+```c
+int Stack.push(stack s, object value);
+```
+Push a value onto the top of the stack.
+
+**Parameters**:
+- `s` - Stack to push onto
+- `value` - Value to push
+
+**Returns**: 0 on success, -1 on error
+
+---
+
+#### `Stack.pop`
+```c
+object Stack.pop(stack s);
+```
+Remove and return the value at the top of the stack.
+
+**Returns**: The top value, or `NULL` if the stack is empty
+
+---
+
+#### `Stack.peek`
+```c
+object Stack.peek(stack s);
+```
+Return the value at the top of the stack without removing it.
+
+**Returns**: The top value, or `NULL` if the stack is empty
+
+---
+
+#### `Stack.is_empty`
+```c
+bool Stack.is_empty(stack s);
+```
+Check whether the stack has no elements.
+
+**Returns**: `true` if empty; otherwise `false`
+
+---
+
+#### `Stack.count`
+```c
+usize Stack.count(stack s);
+```
+Get the current number of elements on the stack.
+
+**Returns**: Current element count
+
+---
+
+#### `Stack.clear`
+```c
+void Stack.clear(stack s);
+```
+Clear the contents of the stack.
+
+---
+
+#### `Stack.mark`
+```c
+usize Stack.mark(stack s);
+```
+Save the stack's current depth as a bookmark, for use with `Stack.restore`.
+
+**Returns**: The current depth (`== Stack.count(s)`)
+
+---
+
+#### `Stack.restore`
+```c
+void Stack.restore(stack s, usize mark);
+```
+Truncate the stack back to a previously saved depth, discarding everything pushed after it. O(1) — no allocation, no zeroing of the discarded region.
+
+**Parameters**:
+- `s` - Stack to restore
+- `mark` - A depth previously returned by `Stack.mark`; a value greater than the current depth is a no-op
+
+**Example** — save-point/rollback pattern (e.g. speculative parsing):
+```c
+usize checkpoint = Stack.mark(s);
+try_speculative_parse(s);
+if (parse_failed) {
+    Stack.restore(s, checkpoint);  // discard everything pushed since the checkpoint
+}
+```
 
 ---
 
@@ -483,16 +656,18 @@ Create sparse iterator.
 
 ---
 
-#### `SlotArray.alloc_use`
+#### `SlotArray.as_queryable`
 ```c
-void SlotArray.alloc_use(sc_alloc_use_t *use);
+sc_queryable SlotArray.as_queryable(slotarray sa);
 ```
-Set custom allocator for all collections.
+Produce a heapless queryable over the slotarray's occupied slots, for use with [`Query.next`/`Query.first`](#query). Skips empty slots automatically. Yields `const addr *` per element.
 
 **Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+- `sa` - SlotArray to query
 
-**Notes**: Sets module-level allocator shared by all collection types.
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not `add`/`remove_at` on `sa` while the returned queryable is in use — see [Query](#query)'s invariant note.
 
 ---
 
@@ -645,19 +820,6 @@ sparse_iterator IndexArray.create_iterator(indexarray ia);
 Create sparse iterator.
 
 **Returns**: Iterator or NULL on failure
-
----
-
-#### `IndexArray.alloc_use`
-```c
-void IndexArray.alloc_use(sc_alloc_use_t *use);
-```
-Set custom allocator for all collections.
-
-**Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
-
-**Notes**: Sets module-level allocator shared by all collection types.
 
 ---
 
@@ -828,16 +990,56 @@ SparseIterator.dispose(it);
 
 ---
 
-#### `Map.alloc_use`
+#### `Map.as_queryable`
 ```c
-void Map.alloc_use(sc_alloc_use_t *use);
+sc_queryable Map.as_queryable(map m);
 ```
-Set custom allocator for all collections.
+Produce a heapless queryable over the map's entries (key + key_len + value together), for use with [`Query.next`/`Query.first`](#query). Skips empty and tombstone slots automatically. Yields `const map_entry *` per element.
 
 **Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
+- `m` - Map to query
 
-**Notes**: Sets module-level allocator shared by all collection types.
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not `set`/`remove` on `m` while the returned queryable is in use — same rule as `create_iterator` above, and see [Query](#query)'s invariant note.
+
+**Example** — something `Map.get` can't do, finding an entry *by value*:
+```c
+bool value_is_3(const void *element, usize index, void *userdata) {
+    return ((const map_entry *)element)->value == 3;
+}
+Query.first(Map.as_queryable(m), value_is_3, NULL, NULL);
+```
+
+---
+
+#### `Map.keys`
+```c
+sc_queryable Map.keys(map m);
+```
+Produce a heapless queryable over just the map's keys. Skips empty and tombstone slots automatically. Yields `const sc_key_view *` per element — keys are caller-owned byte spans, not guaranteed NUL-terminated, so this yields a `{ptr, len}` view rather than a bare `const char *`.
+
+**Parameters**:
+- `m` - Map to query
+
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not `set`/`remove` on `m` while the returned queryable is in use — see [Query](#query)'s invariant note.
+
+---
+
+#### `Map.values`
+```c
+sc_queryable Map.values(map m);
+```
+Produce a heapless queryable over just the map's values. Skips empty and tombstone slots automatically. Yields `const usize *` per element.
+
+**Parameters**:
+- `m` - Map to query
+
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not `set`/`remove` on `m` while the returned queryable is in use — see [Query](#query)'s invariant note.
 
 ---
 
@@ -945,6 +1147,100 @@ Dispose of iterator.
 
 ---
 
+## Query
+
+**Header**: `<sigma.collections/query.h>`
+
+A uniform, **heapless** way to scan any collection type in this library — FArray, PArray, Collection, List, SlotArray, Map — via a small POD cursor (`sc_queryable`) each type produces through its own `as_queryable` (or, for Map, `keys`/`values`). `Query.next` pulls one element at a time, caller-driven; `Query.first` is a convenience that stops at the first element satisfying a predicate. Nothing in `Query` allocates — an `sc_queryable` is a plain struct you hold by value, typically on the stack, wired to a source's existing storage.
+
+Compare this to [`Iterator`](#iterator)/[`SparseIterator`](#sparseiterator): those require allocating (and later disposing) a stateful iterator object, which is the right cost for a genuine multi-step iteration session you hold onto (`reset`, `current`, explicit lifetime). `Query` is for the cheaper, more common case — "find the first thing matching X" or "walk this once and sum it up" — where paying for a heap allocation just to ask one question is wasted work, especially inside a hot loop.
+
+### Types
+
+```c
+typedef struct sc_queryable {
+    void *source;                 // The underlying handle (farray/parray/collection/map/slotarray)
+    usize element_size;           // Meaningful for dense sources; ignored by sparse ones
+    usize bound;                  // Upper bound for index — logical length for dense sources,
+                                   // raw slot count for sparse sources
+    usize index;                  // Current scan position — mutated by advance()
+    sc_query_advance_fn advance;  // The source-kind-specific stepping behavior
+} sc_queryable;
+```
+A heapless, POD cursor over some collection's elements. **Never constructed by hand** — always produced by a collection type's own `as_queryable` (or `keys`/`values`, for Map). Safe to pass by value.
+
+```c
+typedef struct sc_key_view {
+    const char *ptr;
+    usize len;
+} sc_key_view;
+```
+A projected view of a Map key — keys are caller-owned byte spans, not guaranteed NUL-terminated, so `Map.keys` yields this instead of a bare pointer.
+
+```c
+typedef bool (*sc_predicate_fn)(const void *element, usize index, void *userdata);
+```
+Return `true` to stop a scan at this element (it matched); `false` to keep scanning. Declared in `collection.h`, used by `Query.first`.
+
+### ⚠️ INVARIANT — do not mutate a source while it is in a queryable state
+
+`sc_queryable` is a **live view, not a snapshot** — it holds a raw pointer/index position into the source's own storage, taken at `as_queryable`/`keys`/`values` time. Any operation that can change that storage's shape (add/append/insert/remove/set/clear/resize/grow, on the same farray/parray/collection/list/map/slotarray) once a queryable over it exists and is still being pulled from is **undefined**: a dense source's buffer may have been reallocated out from under the queryable's saved pointer; a sparse source's slot layout may have shifted under its saved index.
+
+Finish pulling from a queryable (or simply stop using it) before mutating its source; construct a fresh one afterward to scan again. This is the same rule `Iterator`/`SparseIterator` already require — `Query` does not relax it, and currently has no runtime check that enforces it.
+
+### Functions
+
+#### `Query.next`
+```c
+bool Query.next(sc_queryable *q, const void **out_element, usize *out_index);
+```
+Pull the next element from a queryable. No predicate, no allocation, no early-break imposed — "roll your own query loop."
+
+**Parameters**:
+- `q` - The queryable to advance (mutated in place)
+- `out_element` - Receives a pointer to the yielded element, or undefined if this call returns false
+- `out_index` - Optional (may be `NULL`); receives the yielded element's index
+
+**Returns**: `true` if an element was yielded; `false` if exhausted
+
+**Example**:
+```c
+sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+const void *elem;
+long sum = 0;
+while (Query.next(&q, &elem, NULL)) {
+    sum += *(const int *)elem;
+}
+```
+
+---
+
+#### `Query.first`
+```c
+bool Query.first(sc_queryable q, sc_predicate_fn pred, void *userdata, usize *out_index);
+```
+A one-call specialization of `next`: loop internally, stop at the first element `pred` returns true for. Covers "find first" (real `out_index`) and "any" (caller passes `NULL` for `out_index`) with one function.
+
+**Parameters**:
+- `q` - The queryable to scan, **passed by value** — this call gets its own cursor, starting fresh from `q`'s current position, leaving the caller's original queryable untouched
+- `pred` - The predicate to test each element against
+- `userdata` - Passed through to every `pred` call
+- `out_index` - Optional (may be `NULL`); receives the matching element's index
+
+**Returns**: `true` if a match was found; `false` if the source was exhausted with no match, or `pred` is `NULL`
+
+**Example** — "any" usage, ignoring the index:
+```c
+bool is_negative(const void *element, usize index, void *userdata) {
+    return *(const int *)element < 0;
+}
+if (Query.first(FArray.as_queryable(arr, sizeof(int)), is_negative, NULL, NULL)) {
+    printf("contains at least one negative value\n");
+}
+```
+
+---
+
 ## Collections
 
 **Header**: `<sigma.collections/collections.h>`
@@ -960,6 +1256,42 @@ iterator Collections.create_iterator(collection coll);
 Create standard iterator for collection.
 
 **Returns**: Iterator or NULL on failure
+
+---
+
+#### `Collections.create_with_allocator`
+```c
+collection Collections.create_with_allocator(usize capacity, usize stride, sc_alloc_use_t *use);
+```
+Create a new collection bound to a caller-supplied allocator-use. The instance grows/orphans through `use` instead of the global Allocator/Application facade. This is the only custom-allocator mechanism in the library — every allocation was previously hard-coded to the global `Allocator` facade with no override available at all; there is no module-wide equivalent.
+
+**Parameters**:
+- `capacity` - Initial collection capacity
+- `stride` - Size of each element in the collection
+- `use` - Allocator-use to bind this instance to, or `NULL` to behave exactly like the global-Allocator-backed path
+
+**Returns**: New collection instance, or NULL on failure
+
+**Notes**:
+- `NULL` is a plain pass-through — every existing caller is unaffected.
+- When bound, growth allocates through `use->alloc` and **orphans** (does not free) the previous buffer — a bump/arena allocator has no way to free one specific prior allocation, only bulk-release the whole arena.
+- `Collections.dispose` on a bound instance likewise skips freeing the buffer; the bound allocator owns reclaiming it.
+- `List.new_with_allocator` and `Stack.new_with_allocator` are thin wrappers over this.
+
+---
+
+#### `Collections.as_queryable`
+```c
+sc_queryable Collections.as_queryable(collection coll);
+```
+Produce a heapless queryable over an existing collection's elements, for use with [`Query.next`/`Query.first`](#query).
+
+**Parameters**:
+- `coll` - Collection to query
+
+**Returns**: An `sc_queryable` ready to scan
+
+**Warning**: Do not mutate `coll` while the returned queryable is in use — see [Query](#query)'s invariant note.
 
 ---
 
@@ -986,35 +1318,6 @@ Clear collection.
 void Collections.dispose(collection coll);
 ```
 Dispose of collection.
-
----
-
-#### `Collections.alloc_use`
-```c
-void Collections.alloc_use(sc_alloc_use_t *use);
-```
-Set custom allocator for all collections module-wide.
-
-**Parameters**:
-- `use` - Pointer to sc_alloc_use_t or NULL to restore malloc/free
-
-**Notes**:
-- Sets module-level allocator affecting all collection types
-- Pass NULL to restore default malloc/free behavior
-- Typically called once at application startup or test setup
-- Not thread-safe - set before spawning threads
-
-**Example**:
-```c
-// For testing with leak detection
-Collections.alloc_use(sigtest_alloc_use());
-
-// For custom memory pool
-Collections.alloc_use(&my_allocator);
-
-// Restore default malloc/free
-Collections.alloc_use(NULL);
-```
 
 ---
 
