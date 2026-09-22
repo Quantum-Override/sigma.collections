@@ -4,7 +4,8 @@
 **Type:** Feature Request
 **Owner:** sigma.collections
 **Filed:** 2026-09-22
-**Status:** open
+**Status:** resolved
+**Resolved:** 2026-09-22
 **Priority:** Medium
 **Tags:** allocator, arena, anvil-parity
 
@@ -181,3 +182,19 @@ Ported from Anvil's `test/sigma/test_collections.c` (IC04–IC06) and `test/sigm
 **Blocked by:** None.
 **Parallel with:** FR-2603-sigma-collections-006 (Query) — independent axes of the same
 Anvil-parity effort, landing on the same branch.
+
+---
+
+## Resolution
+
+**Resolved:** 2026-09-22
+**Commits:** bba5195 (Collections.create_with_allocator), 526c363 (List.new_with_allocator) —
+both on `feature/FR-2603-sigma-collections-006-anvil-parity`.
+
+All R1–R6 delivered as specced, ported from Anvil's `collection_new_with_allocator` /
+`list_new_with_allocator` with no design deviation. TDD throughout: tests written first
+against the not-yet-existing methods (confirmed RED), then implemented to GREEN. Verified via
+direct compile+link+run against the prebuilt sibling package objects (see FR-006's Resolution
+for why `rtest` itself isn't usable in this sandbox). No regressions in any pre-existing test.
+
+FArray/PArray/SlotArray/Map were out of scope per this FR's own text and remain untouched.
