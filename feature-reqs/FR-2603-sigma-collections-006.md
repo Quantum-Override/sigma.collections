@@ -4,7 +4,8 @@
 **Type:** Feature Request
 **Owner:** sigma.collections
 **Filed:** 2026-09-22
-**Status:** open
+**Status:** resolved
+**Resolved:** 2026-09-22
 **Priority:** Medium
 **Tags:** query, iteration, anvil-parity
 
@@ -198,3 +199,37 @@ convention (`Query.next`/`Query.first`) instead of two.
 **FR numbering gap (008–010):** Anvil's headers reference FR-2603-sigma-collections-007 and
 -011 by number but nothing in between; whatever 008–010 were (if anything) was never filed
 here and isn't reconstructed by this FR.
+
+---
+
+## Resolution
+
+**Resolved:** 2026-09-22
+**Commits:** 68a096e (Query mechanism), e450a34 (FArray), 6487ec3 (PArray), bcf16da
+(Collection), 36c2c85 (List), d41c3cb (SlotArray), ded8cf5 (Map keys/values) — all on
+`feature/FR-2603-sigma-collections-006-anvil-parity`.
+
+All R1–R5 requirements delivered exactly as specced, ported from Anvil's `src/sigma/query.h`
++`.c` and each type's `as_queryable`/`keys`/`values` with no design deviation. Built strict
+TDD throughout: each type's test cases were written first against the not-yet-existing method
+and confirmed RED before implementing — most RED states surfaced as compile errors, but
+List/SlotArray/Map's confirmed RED via a null-function-pointer crash instead, since C
+zero-fills an unset field in a designated-initializer struct literal (`const sc_list_i List =
+{...}` compiles fine with `.as_queryable` simply absent/NULL) rather than refusing to compile.
+
+One deliberate deviation from the FR text: Map's value type stays `usize` (not Anvil's `addr`
+rename) — flagged in R4 as a known, intentional gap, not an oversight.
+
+Two pre-existing, unrelated bugs were found and fixed along the way because they blocked
+compiling/running the files this FR needed to touch: a stray trailing `}` in both
+`test_slotarray.c` and `test_parray.c` (broke compilation entirely), and — found but
+deliberately **not** fixed, since it's out of scope — a `free()` call on `Allocator`-owned
+memory in `test_slotarray_from_value_array` (crashes the whole test binary; already broken on
+the last real run recorded in `logs/test_slotarray.log` before this FR touched the file).
+Recommend filing a BR for that one.
+
+Full acceptance criteria: all GREEN, verified by direct compile+link+run against the prebuilt
+sibling `sigma.core`/`sigma.memory`/`sigma.test` package objects (this sandbox has no
+`/usr/local/packages` for `rtest` to use, so verification bypassed `rtest` and drove `gcc`
+directly with an include-path shim reproducing the same package layout). No regressions in
+any pre-existing test.
