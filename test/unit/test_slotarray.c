@@ -535,4 +535,3 @@ static void register_slotarray_tests(void) {
 __attribute__((constructor)) static void enqueue_slotarray_tests(void) {
     Tests.enqueue(register_slotarray_tests);
 }
-}
