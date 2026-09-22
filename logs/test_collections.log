@@ -1,0 +1,8 @@
+Test Source: test/unit/test_collections.c
+[2] core_collections_set      :    3 : 2026-09-22  02:27:00                     
+================================================================================
+Running: collections_create_view_count                          6.485 µs [PASS]
+Running: collections_as_queryable_first                         3.825 µs [PASS]
+Running: collections_as_queryable_next                          3.100 µs [PASS]
+================================================================================
+[2]     TESTS=  3        PASS=  3        FAIL=  0        SKIP=  0
