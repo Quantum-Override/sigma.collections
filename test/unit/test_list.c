@@ -9,6 +9,7 @@
 #include <string.h>
 #include "farray.h"
 #include "list.h"
+#include "query.h"
 
 //  let's implement a test person struct for list data
 typedef struct {
@@ -471,6 +472,52 @@ static void test_list_append_null_value(void) {
     List.dispose(lst);
 }
 
+// List.as_queryable: Query.first finds a match, zero alloc
+static bool list_points_to_30(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    int *stored = *(int *const *)element;
+    return stored && *stored == 30;
+}
+
+static void test_list_as_queryable_first(void) {
+    list lst = List.new(4, sizeof(void *));
+    int a = 10, b = 20, c = 30, d = 40;
+    List.append(lst, &a);
+    List.append(lst, &b);
+    List.append(lst, &c);
+    List.append(lst, &d);
+
+    sc_queryable q = List.as_queryable(lst);
+    usize idx = 999;
+    Assert.isTrue(Query.first(q, list_points_to_30, NULL, &idx), "Query.first finds 30");
+    Assert.areEqual(&(usize){2}, &idx, INT, "30 is at index 2");
+
+    List.dispose(lst);
+}
+
+// List.as_queryable: Query.next visits every element in order
+static void test_list_as_queryable_next(void) {
+    list lst = List.new(4, sizeof(void *));
+    int a = 1, b = 2, c = 3;
+    List.append(lst, &a);
+    List.append(lst, &b);
+    List.append(lst, &c);
+
+    sc_queryable q = List.as_queryable(lst);
+    const void *elem;
+    int expected[3] = {1, 2, 3};
+    int seen = 0;
+    while (Query.next(&q, &elem, NULL)) {
+        int *stored = *(int *const *)elem;
+        Assert.areEqual(&expected[seen], stored, INT, "element matches expected order");
+        seen++;
+    }
+    Assert.areEqual(&(int){3}, &seen, INT, "Query.next visits all 3 elements");
+
+    List.dispose(lst);
+}
+
 //  register test cases
 static void register_list_tests(void) {
     testset("core_list_set", set_config, set_teardown);
@@ -502,6 +549,9 @@ static void register_list_tests(void) {
     testcase("list_get_empty_list", test_list_get_empty_list);
     testcase("list_remove_empty_list", test_list_remove_empty_list);
     testcase("list_append_null_value", test_list_append_null_value);
+
+    testcase("list_as_queryable_first", test_list_as_queryable_first);
+    testcase("list_as_queryable_next", test_list_as_queryable_next);
 }
 __attribute__((constructor)) static void enqueue_list_tests(void) {
     Tests.enqueue(register_list_tests);

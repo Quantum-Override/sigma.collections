@@ -191,6 +191,14 @@ static void list_clear(list lst) {
     collection_clear(lst->coll);
 }
 
+// produce a heapless queryable over the list's own already-owned collection
+static sc_queryable list_as_queryable(list lst) {
+    if (!lst) {
+        return (sc_queryable){0};
+    }
+    return Collections.as_queryable(lst->coll);
+}
+
 //  public interface implementation
 const sc_list_i List = {
     .new = list_new,
@@ -204,4 +212,5 @@ const sc_list_i List = {
     .insert = list_insert_at,
     .prepend = list_prepend,
     .clear = list_clear,
+    .as_queryable = list_as_queryable,
 };

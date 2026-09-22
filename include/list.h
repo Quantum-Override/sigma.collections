@@ -113,5 +113,14 @@ typedef struct sc_list_i {
      * @param lst The list to clear
      */
     void (*clear)(list);
+    /**
+     * @brief Produce a heapless queryable over the list's elements, for
+     *        Query.next/Query.first.
+     * @param lst The list to query
+     * @return An sc_queryable ready to scan
+     * @warning Do not mutate lst while the returned queryable is in use —
+     *          see the INVARIANT note in query.h.
+     */
+    sc_queryable (*as_queryable)(list lst);
 } sc_list_i;
 extern const sc_list_i List;
