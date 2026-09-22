@@ -1,3 +1,15 @@
 
 /build
 /build/test
+
+# Makefile-driven build/test outputs (test/unit/, and any future test/<dir>/)
+bin/
+.deps/
+*.d
+
+# Coverage reports (make coverage)
+*.gcno
+*.gcda
+coverage.info
+coverage.filtered.info
+coverage-html/
