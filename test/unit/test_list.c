@@ -10,6 +10,7 @@
 #include "farray.h"
 #include "list.h"
 #include "query.h"
+#include "fake_arena.h"
 
 //  let's implement a test person struct for list data
 typedef struct {
@@ -518,6 +519,64 @@ static void test_list_as_queryable_next(void) {
     List.dispose(lst);
 }
 
+// new_with_allocator(NULL) behaves exactly like List.new
+// (FR-2603-sigma-collections-007)
+static void test_list_new_with_allocator_null_is_default_path(void) {
+    list lst = List.new_with_allocator(4, sizeof(void *), NULL);
+    Assert.isNotNull(lst, "new_with_allocator(NULL) returns non-null");
+
+    int a = 1, b = 2;
+    List.append(lst, &a);
+    List.append(lst, &b);
+    Assert.areEqual(&(int){2}, &(int){List.size(lst)}, INT, "size is 2 after 2 appends");
+
+    List.dispose(lst);
+}
+
+// new_with_allocator(&use) grows through the override and orphans the old
+// buffer instead of releasing it
+static void test_list_new_with_allocator_grow_orphans(void) {
+    fake_arena_reset();
+
+    list lst = List.new_with_allocator(2, sizeof(void *), &fake_arena_use);
+    Assert.isNotNull(lst, "new_with_allocator(&use) returns non-null");
+    Assert.isTrue(fake_arena_alloc_calls >= 1, "initial buffer allocated through override");
+
+    int before_grow_calls = fake_arena_alloc_calls;
+    int vals[8];
+    for (int i = 0; i < 8; i++) {
+        vals[i] = i * 10;
+        List.append(lst, &vals[i]);
+    }
+
+    Assert.areEqual(&(int){8}, &(int){List.size(lst)}, INT, "size is 8 after growing");
+    Assert.isTrue(fake_arena_alloc_calls > before_grow_calls,
+                  "growth allocated new buffer(s) through the override");
+    Assert.areEqual(&(int){0}, &fake_arena_release_calls, INT,
+                    "growth never released the orphaned buffer through the override");
+
+    void *out = NULL;
+    List.get(lst, 7, &out);
+    Assert.areEqual(&(int){70}, (int *)out, INT, "last element is correct after arena-backed growth");
+
+    List.dispose(lst);
+}
+
+// list_dispose skips releasing the bucket through the override - the
+// bound allocator owns bulk-reclaiming it
+static void test_list_dispose_skips_release_when_overridden(void) {
+    fake_arena_reset();
+
+    list lst = List.new_with_allocator(4, sizeof(void *), &fake_arena_use);
+    int a = 1;
+    List.append(lst, &a);
+
+    List.dispose(lst);
+
+    Assert.areEqual(&(int){0}, &fake_arena_release_calls, INT,
+                    "dispose never released the buffer through the override");
+}
+
 //  register test cases
 static void register_list_tests(void) {
     testset("core_list_set", set_config, set_teardown);
@@ -552,6 +611,12 @@ static void register_list_tests(void) {
 
     testcase("list_as_queryable_first", test_list_as_queryable_first);
     testcase("list_as_queryable_next", test_list_as_queryable_next);
+
+    testcase("list_new_with_allocator_null_is_default_path",
+             test_list_new_with_allocator_null_is_default_path);
+    testcase("list_new_with_allocator_grow_orphans", test_list_new_with_allocator_grow_orphans);
+    testcase("list_dispose_skips_release_when_overridden",
+             test_list_dispose_skips_release_when_overridden);
 }
 __attribute__((constructor)) static void enqueue_list_tests(void) {
     Tests.enqueue(register_list_tests);
