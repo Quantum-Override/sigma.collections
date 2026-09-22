@@ -4,7 +4,8 @@
 **Type:** Feature Request
 **Owner:** sigma.collections
 **Filed:** 2026-09-22
-**Status:** open
+**Status:** resolved
+**Resolved:** 2026-09-22
 **Priority:** Medium
 **Tags:** new-type, anvil-parity
 
@@ -130,3 +131,20 @@ Ported from Anvil's `test/sigma/test_stack.c` (ST01–ST09):
 depends on `collection_new_with_allocator` existing).
 **Parallel with:** FR-2603-sigma-collections-006 (Query) — independent; Stack does not gain
 `as_queryable` under this FR (see Out of scope).
+
+---
+
+## Resolution
+
+**Resolved:** 2026-09-22
+**Commit:** f8e52e7 on `feature/FR-2603-sigma-collections-006-anvil-parity`.
+
+R1–R2 delivered as specced, ported from Anvil's `stack.h`/`stack.c` with no design deviation.
+TDD: `test/unit/test_stack.c` (ST01–09) written first against the not-yet-existing `stack.h`
+(confirmed RED — fatal compile error, header missing), then implemented to GREEN (9/9). Full
+regression sweep across every other touched test file stayed green. Verified via direct
+compile+link+run against the prebuilt sibling package objects (see FR-006's Resolution for why
+`rtest` itself isn't usable in this sandbox).
+
+This completes item 5 of the Anvil-parity scope: Query (FR-006), per-type `as_queryable`
+(FR-006), per-instance allocator override (FR-007), and Stack (FR-011) are all implemented.
