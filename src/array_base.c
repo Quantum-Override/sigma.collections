@@ -51,6 +51,28 @@ void *array_base_get_element_ptr(const sc_array_base *arr, usize element_size, u
     return (char *)arr->bucket + index * element_size;
 }
 
+// Shared sc_query_advance_fn for every dense source — walks self->source
+// (cast to sc_array_base*) at self->element_size, up to self->bound, in order.
+bool array_base_query_advance(sc_queryable *self, const void **out_element, usize *out_index) {
+    if (!self || !self->source) {
+        return false;
+    }
+    if (self->index >= self->bound) {
+        return false;
+    }
+    const sc_array_base *arr = (const sc_array_base *)self->source;
+    void *element = array_base_get_element_ptr(arr, self->element_size, self->index);
+    if (!element) {
+        return false;
+    }
+    *out_element = element;
+    if (out_index) {
+        *out_index = self->index;
+    }
+    self->index++;
+    return true;
+}
+
 // Generic set operation using callback
 int array_base_set_element(sc_array_base *arr, usize element_size, usize index, const void *value,
                            array_element_copy_fn copy_fn) {

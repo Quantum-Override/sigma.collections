@@ -42,6 +42,7 @@
 #include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
 #include "collection.h"
+#include "query.h"
 
 // forward declaration of the array structure
 struct sc_flex_array;
@@ -121,5 +122,15 @@ typedef struct sc_farray_i {
      * @return A collection copy, or NULL on failure
      */
     collection (*to_collection)(farray, usize);
+    /**
+     * @brief Produce a heapless queryable over the array's elements, for
+     *        Query.next/Query.first — no allocation, no collection view.
+     * @param arr The array to query
+     * @param stride Size of each element in the array
+     * @return An sc_queryable ready to scan
+     * @warning Do not mutate arr while the returned queryable is in use —
+     *          see the INVARIANT note in query.h.
+     */
+    sc_queryable (*as_queryable)(farray, usize);
 } sc_farray_i;
 extern const sc_farray_i FArray;
