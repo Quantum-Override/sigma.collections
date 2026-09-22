@@ -26,6 +26,11 @@
  */
 #pragma once
 
+#include <sigma.core/types.h>
+
 // forward declaration of the collection structure
 struct sc_collection;
 typedef struct sc_collection *collection;
+
+// Return true to stop a scan at this element (it matched); false to keep scanning.
+typedef bool (*sc_predicate_fn)(const void *element, usize index, void *userdata);
