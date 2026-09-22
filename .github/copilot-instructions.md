@@ -313,7 +313,7 @@ When implementing Feature Requests (FRs) or Bug Reports (BRs), follow the **mand
 4. ✅ TEST — Full suite GREEN, valgrind clean, no regressions
 5. ✅ DOCUMENT — CHANGELOG, README, inline docs, FR/BR resolution notes
 6. ✅ COMMIT — Conventional commits, reference FR/BR ID, push branch
-7. ✅ UPDATE FR/BR — Change status to "resolved", update `q-or/registry.anvl`
+7. ✅ UPDATE FR/BR — Change status to "resolved", use `python3 tools/doc-register.py` to update registry (NEVER edit registry.anvl directly)
 8. ✅ UPDATE WIP (complete) — Mark steps done, update next_action, run `wip.py sync`
 
 **FR/BR Placement:** FRs and BRs targeting this project MUST live in `sigma.collections/feature-reqs/` or `sigma.collections/bug-reports/`, not in the reporter's project.
