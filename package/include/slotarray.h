@@ -109,5 +109,16 @@ typedef struct sc_slotarray_i {
      * @return New sparse iterator, or NULL on failure
      */
     sparse_iterator (*create_iterator)(slotarray);
+
+    /**
+     * @brief Produce a heapless queryable over the slotarray's occupied
+     *        slots, for Query.next/Query.first. Skips empty slots
+     *        automatically.
+     * @param sa The slotarray to query
+     * @return An sc_queryable yielding `const addr *` per element
+     * @warning Do not add/remove_at on sa while the returned queryable is
+     *          in use — see the INVARIANT note in query.h.
+     */
+    sc_queryable (*as_queryable)(slotarray sa);
 } sc_slotarray_i;
 extern const sc_slotarray_i SlotArray;

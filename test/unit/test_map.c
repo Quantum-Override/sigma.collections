@@ -9,6 +9,7 @@
 #include <string.h>
 #include "collections.h"
 #include "map.h"
+#include "query.h"
 
 // Test set configuration
 static void set_config(FILE **log_stream) { *log_stream = fopen("logs/test_map.log", "w"); }
@@ -415,6 +416,110 @@ static void test_map_iterate_keys_values(void) {
     }
 }
 
+// Map.as_queryable yields entries, skipping tombstones
+static void test_map_as_queryable_skips_tombstones(void) {
+    map m = Map.new(8);
+    Map.set(m, "a", 1, 1);
+    Map.set(m, "b", 1, 2);
+    Map.set(m, "c", 1, 3);
+    Map.remove(m, "b", 1);  // tombstone
+    Map.set(m, "d", 1, 4);
+
+    sc_queryable q = Map.as_queryable(m);
+    const void *elem;
+    int seen = 0;
+    long sum = 0;
+    while (Query.next(&q, &elem, NULL)) {
+        const map_entry *entry = elem;
+        Assert.isTrue(entry->key_len > 0, "entry key_len is non-zero");
+        sum += (long)entry->value;
+        seen++;
+    }
+
+    Assert.areEqual(&(int){3}, &seen, INT, "as_queryable skips tombstones, visits 3 entries");
+    Assert.areEqual(&(long){8}, &sum, INT, "as_queryable sees expected values (1+3+4)");
+
+    Map.dispose(m);
+}
+
+// Map.as_queryable + Query.first: find entry by value
+static bool map_value_is_3(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    return ((const map_entry *)element)->value == 3;
+}
+
+static bool map_value_is_999(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    return ((const map_entry *)element)->value == 999;
+}
+
+static void test_map_as_queryable_first_by_value(void) {
+    map m = Map.new(8);
+    Map.set(m, "a", 1, 1);
+    Map.set(m, "b", 1, 2);
+    Map.set(m, "c", 1, 3);
+
+    Assert.isTrue(Query.first(Map.as_queryable(m), map_value_is_3, NULL, NULL),
+                  "Query.first finds entry with value 3 - Map.get can't do this by value");
+    Assert.isFalse(Query.first(Map.as_queryable(m), map_value_is_999, NULL, NULL),
+                   "Query.first returns false for a value that isn't present");
+
+    Map.dispose(m);
+}
+
+// Map.keys yields every key, skipping tombstones
+static void test_map_keys(void) {
+    map m = Map.new(8);
+    Map.set(m, "alpha", 5, 1);
+    Map.set(m, "beta", 4, 2);
+    Map.remove(m, "beta", 4);  // tombstone
+    Map.set(m, "gamma", 5, 3);
+
+    sc_queryable q = Map.keys(m);
+    const void *elem;
+    int seen = 0;
+    bool saw_alpha = false, saw_gamma = false, saw_beta = false;
+    while (Query.next(&q, &elem, NULL)) {
+        const sc_key_view *k = elem;
+        if (k->len == 5 && memcmp(k->ptr, "alpha", 5) == 0) saw_alpha = true;
+        if (k->len == 5 && memcmp(k->ptr, "gamma", 5) == 0) saw_gamma = true;
+        if (k->len == 4 && memcmp(k->ptr, "beta", 4) == 0) saw_beta = true;
+        seen++;
+    }
+
+    Assert.areEqual(&(int){2}, &seen, INT, "keys visits 2 live entries");
+    Assert.isTrue(saw_alpha, "alpha present");
+    Assert.isTrue(saw_gamma, "gamma present");
+    Assert.isFalse(saw_beta, "removed key beta not present");
+
+    Map.dispose(m);
+}
+
+// Map.values yields every value, skipping tombstones
+static void test_map_values(void) {
+    map m = Map.new(8);
+    Map.set(m, "a", 1, 10);
+    Map.set(m, "b", 1, 20);
+    Map.remove(m, "a", 1);  // tombstone
+    Map.set(m, "c", 1, 30);
+
+    sc_queryable q = Map.values(m);
+    const void *elem;
+    int seen = 0;
+    long sum = 0;
+    while (Query.next(&q, &elem, NULL)) {
+        sum += (long)*(const usize *)elem;
+        seen++;
+    }
+
+    Assert.areEqual(&(int){2}, &seen, INT, "values visits 2 live entries");
+    Assert.areEqual(&(long){50}, &sum, INT, "values sees expected values (20+30)");
+
+    Map.dispose(m);
+}
+
 //------------------------------------------------------------------------------
 // Test Registration
 //------------------------------------------------------------------------------
@@ -451,6 +556,12 @@ static void register_map_tests(void) {
 
     // Iterator
     testcase("map_iterate_keys_values", test_map_iterate_keys_values);
+
+    // Query
+    testcase("map_as_queryable_skips_tombstones", test_map_as_queryable_skips_tombstones);
+    testcase("map_as_queryable_first_by_value", test_map_as_queryable_first_by_value);
+    testcase("map_keys", test_map_keys);
+    testcase("map_values", test_map_values);
 }
 __attribute__((constructor)) static void enqueue_map_tests(void) {
     Tests.enqueue(register_map_tests);

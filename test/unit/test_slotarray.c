@@ -10,6 +10,7 @@
 #include "collections.h"
 #include "farray.h"
 #include "parray.h"
+#include "query.h"
 #include "slotarray.h"
 
 //  configure test set
@@ -503,6 +504,52 @@ static void test_slotarray_iterator_full(void) {
     SlotArray.dispose(sa);
 }
 
+// SlotArray.as_queryable skips empty slots
+static void test_slotarray_as_queryable_skips_empty(void) {
+    slotarray sa = SlotArray.new(4);
+    int a = 1, b = 2, c = 3;
+    int idx_a = SlotArray.add(sa, &a);
+    SlotArray.add(sa, &b);
+    SlotArray.add(sa, &c);
+    SlotArray.remove_at(sa, idx_a);
+
+    sc_queryable q = SlotArray.as_queryable(sa);
+    const void *elem;
+    int seen = 0;
+    long sum = 0;
+    while (Query.next(&q, &elem, NULL)) {
+        addr value = *(const addr *)elem;
+        sum += *(int *)value;
+        seen++;
+    }
+
+    Assert.areEqual(&(int){2}, &seen, INT, "as_queryable visits only the 2 occupied slots");
+    Assert.areEqual(&(long){5}, &sum, INT, "as_queryable sees expected values (2+3)");
+
+    SlotArray.dispose(sa);
+}
+
+// SlotArray.as_queryable + Query.first finds a match
+static bool slotarray_points_to_3(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    addr value = *(const addr *)element;
+    return value != ADDR_EMPTY && *(int *)value == 3;
+}
+
+static void test_slotarray_as_queryable_first(void) {
+    slotarray sa = SlotArray.new(4);
+    int a = 1, b = 2, c = 3;
+    SlotArray.add(sa, &a);
+    SlotArray.add(sa, &b);
+    SlotArray.add(sa, &c);
+
+    Assert.isTrue(Query.first(SlotArray.as_queryable(sa), slotarray_points_to_3, NULL, NULL),
+                  "Query.first finds the element pointing to 3");
+
+    SlotArray.dispose(sa);
+}
+
 //  register test cases
 static void register_slotarray_tests(void) {
     testset("core_slotarray_set", set_config, set_teardown);
@@ -531,8 +578,10 @@ static void register_slotarray_tests(void) {
     testcase("slotarray_iterator_empty", test_slotarray_iterator_empty);
     testcase("slotarray_iterator_sparse", test_slotarray_iterator_sparse);
     testcase("slotarray_iterator_full", test_slotarray_iterator_full);
+
+    testcase("slotarray_as_queryable_skips_empty", test_slotarray_as_queryable_skips_empty);
+    testcase("slotarray_as_queryable_first", test_slotarray_as_queryable_first);
 }
 __attribute__((constructor)) static void enqueue_slotarray_tests(void) {
     Tests.enqueue(register_slotarray_tests);
-}
 }

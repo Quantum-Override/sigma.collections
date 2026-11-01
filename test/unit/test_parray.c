@@ -17,6 +17,7 @@
 #include <string.h>
 #include "collections.h"
 #include "parray.h"
+#include "query.h"
 
 //  configure test set
 static void set_config(FILE **log_stream) {
@@ -225,6 +226,54 @@ static void test_array_remove_out_of_bounds(void) {
     PArray.dispose(arr);
 }
 
+// PArray.as_queryable: Query.first finds a match, zero alloc
+static int parray_target_value = 30;
+static bool parray_points_to_target(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    addr value = *(const addr *)element;
+    return value != ADDR_EMPTY && *(int *)value == parray_target_value;
+}
+
+static void test_parray_as_queryable_first(void) {
+    parray arr = PArray.new(4);
+    int values[] = {10, 20, 30, 40};
+    for (int i = 0; i < 4; i++) {
+        PArray.set(arr, i, (addr)&values[i]);
+    }
+
+    sc_queryable q = PArray.as_queryable(arr);
+    usize idx = 999;
+    Assert.isTrue(Query.first(q, parray_points_to_target, NULL, &idx), "as_queryable: Query.first finds 30");
+    Assert.areEqual(&(usize){2}, &idx, INT, "as_queryable: 30 is at index 2");
+
+    PArray.dispose(arr);
+}
+
+// PArray.as_queryable: Query.next visits every element in order
+static void test_parray_as_queryable_next(void) {
+    parray arr = PArray.new(3);
+    int values[] = {5, 6, 7};
+    for (int i = 0; i < 3; i++) {
+        PArray.set(arr, i, (addr)&values[i]);
+    }
+
+    sc_queryable q = PArray.as_queryable(arr);
+    const void *elem;
+    int seen = 0;
+    long sum = 0;
+    while (Query.next(&q, &elem, NULL)) {
+        addr value = *(const addr *)elem;
+        sum += *(int *)value;
+        seen++;
+    }
+
+    Assert.areEqual(&(int){3}, &seen, INT, "as_queryable: Query.next visits all 3 elements");
+    Assert.areEqual(&(long){18}, &sum, INT, "as_queryable: sum of visited elements is 18");
+
+    PArray.dispose(arr);
+}
+
 //  register test cases
 static void register_parray_tests(void) {
     testset("core_pointer_array_set", set_config, set_teardown);
@@ -246,8 +295,10 @@ static void register_parray_tests(void) {
     testcase("array_set_out_of_bounds", test_array_set_out_of_bounds);
     testcase("array_get_out_of_bounds", test_array_get_out_of_bounds);
     testcase("array_remove_out_of_bounds", test_array_remove_out_of_bounds);
+
+    testcase("parray_as_queryable_first", test_parray_as_queryable_first);
+    testcase("parray_as_queryable_next", test_parray_as_queryable_next);
 }
 __attribute__((constructor)) static void enqueue_parray_tests(void) {
     Tests.enqueue(register_parray_tests);
-}
 }

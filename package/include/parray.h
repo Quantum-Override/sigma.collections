@@ -39,6 +39,7 @@
 #pragma once
 
 #include "collection.h"
+#include "query.h"
 // ----------------
 #include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
@@ -122,5 +123,14 @@ typedef struct sc_parray_i {
      * @return A slotarray view, or NULL on failure
      */
     slotarray (*as_slotarray)(parray);
+    /**
+     * @brief Produce a heapless queryable over the array's elements, for
+     *        Query.next/Query.first — no allocation, no collection view.
+     * @param arr The array to query
+     * @return An sc_queryable ready to scan
+     * @warning Do not mutate arr while the returned queryable is in use —
+     *          see the INVARIANT note in query.h.
+     */
+    sc_queryable (*as_queryable)(parray);
 } sc_parray_i;
 extern const sc_parray_i PArray;

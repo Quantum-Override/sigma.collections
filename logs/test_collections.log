@@ -1,0 +1,11 @@
+Test Source: test/unit/test_collections.c
+[2] core_collections_set      :    6 : 2026-09-22  02:33:55                     
+================================================================================
+Running: collections_create_view_count                          7.442 µs [PASS]
+Running: collections_as_queryable_first                         4.548 µs [PASS]
+Running: collections_as_queryable_next                         16.489 µs [PASS]
+Running: collections_create_with_allocator_null_is_default_path18.603 µs [PASS]
+Running: collections_create_with_allocator_grow_orphans        14.379 µs [PASS]
+Running: collections_dispose_skips_release_when_overridden     11.816 µs [PASS]
+================================================================================
+[2]     TESTS=  6        PASS=  6        FAIL=  0        SKIP=  0

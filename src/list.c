@@ -62,6 +62,28 @@ static list list_new(usize capacity, usize stride) {
 
     return lst;
 }
+
+// create a new list bound to a caller-supplied allocator-use
+// (FR-2603-sigma-collections-007). use == NULL is identical to list_new;
+// use != NULL threads the override through to the underlying collection.
+static list list_new_with_allocator(usize capacity, usize stride, sc_alloc_use_t *use) {
+    if (!use) {
+        return list_new(capacity, stride);
+    }
+
+    struct sc_list *lst = Allocator.alloc(sizeof(struct sc_list));
+    if (!lst) {
+        return NULL;
+    }
+
+    lst->coll = collection_new_with_allocator(capacity, stride, use);
+    if (!lst->coll) {
+        Allocator.dispose(lst);
+        return NULL;
+    }
+
+    return lst;
+}
 //  dispose of the list
 static void list_dispose(list lst) {
     if (!lst) {
@@ -191,9 +213,18 @@ static void list_clear(list lst) {
     collection_clear(lst->coll);
 }
 
+// produce a heapless queryable over the list's own already-owned collection
+static sc_queryable list_as_queryable(list lst) {
+    if (!lst) {
+        return (sc_queryable){0};
+    }
+    return Collections.as_queryable(lst->coll);
+}
+
 //  public interface implementation
 const sc_list_i List = {
     .new = list_new,
+    .new_with_allocator = list_new_with_allocator,
     .dispose = list_dispose,
     .capacity = list_capacity,
     .size = list_size,
@@ -204,4 +235,5 @@ const sc_list_i List = {
     .insert = list_insert_at,
     .prepend = list_prepend,
     .clear = list_clear,
+    .as_queryable = list_as_queryable,
 };

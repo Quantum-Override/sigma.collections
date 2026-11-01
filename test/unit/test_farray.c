@@ -14,6 +14,7 @@
 #include <string.h>
 #include "collections.h"
 #include "farray.h"
+#include "query.h"
 
 //  configure test set
 static void set_config(FILE **log_stream) {
@@ -245,6 +246,72 @@ static void test_farray_remove_out_of_bounds(void) {
     FArray.dispose(arr);
 }
 
+// FArray.as_queryable: Query.first finds a match, zero alloc
+static bool farray_is_value_30(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    return *(const int *)element == 30;
+}
+
+static void test_farray_as_queryable_first(void) {
+    farray arr = FArray.new(4, sizeof(int));
+    int values[] = {10, 20, 30, 40};
+    for (int i = 0; i < 4; i++) {
+        FArray.set(arr, i, sizeof(int), &values[i]);
+    }
+
+    sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+    usize idx = 999;
+    Assert.isTrue(Query.first(q, farray_is_value_30, NULL, &idx), "as_queryable: Query.first finds 30");
+    Assert.areEqual(&(usize){2}, &idx, INT, "as_queryable: 30 is at index 2");
+
+    FArray.dispose(arr);
+}
+
+// FArray.as_queryable: Query.next visits every element in order
+static void test_farray_as_queryable_next(void) {
+    farray arr = FArray.new(3, sizeof(int));
+    int values[] = {5, 6, 7};
+    for (int i = 0; i < 3; i++) {
+        FArray.set(arr, i, sizeof(int), &values[i]);
+    }
+
+    sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+    const void *elem;
+    int seen = 0;
+    long sum = 0;
+    while (Query.next(&q, &elem, NULL)) {
+        sum += *(const int *)elem;
+        seen++;
+    }
+
+    Assert.areEqual(&(int){3}, &seen, INT, "as_queryable: Query.next visits all 3 elements");
+    Assert.areEqual(&(long){18}, &sum, INT, "as_queryable: sum of visited elements is 18");
+
+    FArray.dispose(arr);
+}
+
+// FArray.as_queryable: no match exhausts the whole array
+static bool farray_is_value_999(const void *element, usize index, void *userdata) {
+    (void)index;
+    (void)userdata;
+    return *(const int *)element == 999;
+}
+
+static void test_farray_as_queryable_no_match(void) {
+    farray arr = FArray.new(3, sizeof(int));
+    int values[] = {1, 2, 3};
+    for (int i = 0; i < 3; i++) {
+        FArray.set(arr, i, sizeof(int), &values[i]);
+    }
+
+    sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+    Assert.isFalse(Query.first(q, farray_is_value_999, NULL, NULL),
+                   "as_queryable: Query.first returns false when nothing matches");
+
+    FArray.dispose(arr);
+}
+
 //  register test cases
 static void register_farray_tests(void) {
     testset("core_farray_set", set_config, set_teardown);
@@ -266,6 +333,10 @@ static void register_farray_tests(void) {
     testcase("farray_set_out_of_bounds", test_farray_set_out_of_bounds);
     testcase("farray_get_out_of_bounds", test_farray_get_out_of_bounds);
     testcase("farray_remove_out_of_bounds", test_farray_remove_out_of_bounds);
+
+    testcase("farray_as_queryable_first", test_farray_as_queryable_first);
+    testcase("farray_as_queryable_next", test_farray_as_queryable_next);
+    testcase("farray_as_queryable_no_match", test_farray_as_queryable_no_match);
 }
 __attribute__((constructor)) static void enqueue_farray_tests(void) {
     Tests.enqueue(register_farray_tests);

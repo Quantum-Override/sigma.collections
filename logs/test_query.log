@@ -1,0 +1,13 @@
+Test Source: test/unit/test_query.c
+[2] core_query_set            :    8 : 2026-09-22  02:22:48                     
+================================================================================
+Running: query_next_visits_in_order                             3.752 µs [PASS]
+Running: query_first_finds_match                                1.174 µs [PASS]
+Running: query_first_no_match                                   0.990 µs [PASS]
+Running: query_first_any_usage                                  1.085 µs [PASS]
+Running: query_first_early_break                                0.759 µs [PASS]
+Running: query_empty_source                                     0.808 µs [PASS]
+Running: query_null_invariants                                  0.719 µs [PASS]
+Running: query_first_exhausts_on_never_match                    0.912 µs [PASS]
+================================================================================
+[2]     TESTS=  8        PASS=  8        FAIL=  0        SKIP=  0

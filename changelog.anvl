@@ -10,6 +10,32 @@
 
 changelog {
 
+  v0_3_0 @[date="2026-09-22"] {
+    added := [
+      "FR-2603-sigma-collections-006: Query — heapless scan mechanism (Query.next/Query.first) over sc_queryable, ported from Anvil's vendored src/sigma/query.h+.c",
+      "FR-2603-sigma-collections-006: sc_predicate_fn typedef on collection.h, shared array_base_query_advance dense-source stepping function",
+      "FR-2603-sigma-collections-006: as_queryable on FArray, PArray, Collections, List, SlotArray",
+      "FR-2603-sigma-collections-006: as_queryable/keys/values on Map (keys/values skip empty and tombstone slots)",
+      "FR-2603-sigma-collections-007: Collections.create_with_allocator — per-instance sc_alloc_use_t binding for one collection, independent of every other instance",
+      "FR-2603-sigma-collections-007: List.new_with_allocator — thin delegation to Collections.create_with_allocator",
+      "FR-2603-sigma-collections-011: Stack — new LIFO type composed over Collection (push/pop/peek/clear/is_empty/count/clear), plus mark/restore for O(1) truncation to a saved depth; Stack.new_with_allocator via the same allocator-override mechanism",
+      "test/unit/fake_arena.h — malloc-backed sc_alloc_use_t test double, ported from Anvil's test/sigma/fake_arena.h",
+      "docs: Query section in API_REFERENCE.md, COLLECTIONS_OVERVIEW.md, and USERS_GUIDE.md; Stack section in all three plus README.md"
+    ]
+    changed := [
+      "struct sc_collection gains an alloc_use field (NULL = global Allocator/Application facade, unchanged for every existing caller)",
+      "collection_grow / collection_dispose branch on alloc_use — when bound, growth orphans (does not free) the old buffer, and dispose skips freeing the buffer; the bound allocator owns bulk-reclaiming it",
+      "docs: corrected README.md, COLLECTIONS_OVERVIEW.md, API_REFERENCE.md, and USERS_GUIDE.md's Custom Allocation sections, which still described the module-level Collections.alloc_use() hook removed in the Phase 3A cleanup (see FR-2603-sigma-collections-001, obsolete) — the per-instance override above is the only custom-allocator mechanism that currently exists",
+      "internal: Collections library version string 1.2.0 -> 1.3.0 (sc_collections_i gained create_with_allocator and as_queryable this release)"
+    ]
+    fixed := [
+      "Stray trailing '}' in test_slotarray.c and test_parray.c that broke compilation entirely (pre-existing, unrelated typo, found while adding as_queryable tests to those files)"
+    ]
+    removed := []
+    breaking := []
+    migration_notes := "No code changes needed for basic usage. New: Query.next/Query.first via as_queryable (FArray/PArray/Collections/List/SlotArray) and as_queryable/keys/values (Map) for heapless scanning. New: Collections.create_with_allocator/List.new_with_allocator/Stack.new_with_allocator for per-instance allocator binding — NULL behaves exactly like the existing constructors. New: Stack type. Note: docs previously described a Collections.alloc_use() module-wide hook that does not exist in this or any recent release — if you were relying on documentation referencing it, see the corrected Custom Allocation sections."
+  }
+
   v0_2_1 @[date="2026-03-27"] {
     added := [
       "Re-coupled to sigma.memory via Allocator facade — all allocations use Allocator.alloc/dispose",

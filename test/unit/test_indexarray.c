@@ -347,7 +347,7 @@ static void test_indexarray_iterator_sparse(void) {
     int found_ids[2] = {0};
     test_data value = {0};
     while (SparseIterator.next(it)) {
-        int result = SparseIterator.current_value(it, &value);
+        int result = SparseIterator.current_value(it, (object *)&value);
         Assert.areEqual(&(int){0}, &result, INT, "current_value failed");
 
         found_ids[count] = value.id;

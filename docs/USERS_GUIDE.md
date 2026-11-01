@@ -9,6 +9,7 @@ Comprehensive guide to using the sigma.collections library for efficient data st
 - [Sparse Collections](#sparse-collections)
 - [Hash Map](#hash-map)
 - [Iterators](#iterators)
+- [Query](#query)
 - [Buffer Management](#buffer-management)
 - [Custom Allocation](#custom-allocation)
 - [Performance Considerations](#performance-considerations)
@@ -119,6 +120,44 @@ List.dispose(lst);
 - ✅ Sequential access patterns
 - ❌ Expensive removal (shifts elements)
 - ❌ Can over-allocate memory
+
+### Stack - LIFO Collection
+
+**When to use**: LIFO access only — parser/resolver scope tracking, expression evaluation, save-point/rollback patterns.
+
+Composed over [Collection](API_REFERENCE.md#collections) — the same relationship List has to it. `push`/`pop`/`peek`/`clear` are thin wrappers over the underlying collection's add/length operations, so Stack gets automatic growth "for free."
+
+```c
+#include <sigma.collections/stack.h>
+
+// Create stack with initial capacity
+stack s = Stack.new(16);
+
+// Push/pop/peek
+int a = 1, b = 2;
+Stack.push(s, &a);
+Stack.push(s, &b);
+
+object top = Stack.peek(s);   // &b, does not remove
+object popped = Stack.pop(s); // &b, removes
+
+// Save-point / rollback - O(1), no allocation, no zeroing of the
+// discarded region
+usize checkpoint = Stack.mark(s);
+Stack.push(s, &a);
+// ... speculative work that might need to be undone ...
+Stack.restore(s, checkpoint);  // discards everything pushed since checkpoint
+
+// Cleanup
+Stack.dispose(s);
+```
+
+**Trade-offs**:
+- ✅ O(1) push/pop/peek
+- ✅ `mark`/`restore` for O(1) truncation to a saved depth
+- ✅ Dynamic growth (inherited from Collection)
+- ❌ No random access — top only
+- ❌ No iteration or [Query](#query) support (not needed for the stack's usage pattern; would be a trivial addition if a future need arises)
 
 ## Sparse Collections
 
@@ -399,6 +438,93 @@ while (SparseIterator.next(it)) {
 SparseIterator.dispose(it);
 ```
 
+## Query
+
+A second, **heapless** way to scan FArray, PArray, Collection, List, SlotArray, or Map — for the common case where `Iterator`/`SparseIterator`'s allocate-then-dispose lifecycle is more than you need. An `sc_queryable` is a plain POD struct held by value, typically on the stack; `Query.next`/`Query.first` never allocate.
+
+**When to reach for `Query` instead of `Iterator`/`SparseIterator`**: a one-shot scan, or "find the first element matching X" — especially inside a hot loop, where allocating (and disposing) an iterator object just to ask one question is real, avoidable overhead. Reach for `Iterator`/`SparseIterator` instead when you genuinely need a held, multi-step iteration session (`reset`, `current`, explicit lifetime).
+
+### Roll-Your-Own Scan (`Query.next`)
+
+```c
+#include <sigma.collections/query.h>
+#include <sigma.collections/farray.h>
+
+farray arr = FArray.new(4, sizeof(int));
+int values[] = {10, 20, 30, 40};
+for (int i = 0; i < 4; i++) FArray.set(arr, i, sizeof(int), &values[i]);
+
+sc_queryable q = FArray.as_queryable(arr, sizeof(int));
+const void *elem;
+long sum = 0;
+while (Query.next(&q, &elem, NULL)) {
+    sum += *(const int *)elem;
+}
+FArray.dispose(arr);
+```
+
+### Find the First Match (`Query.first`)
+
+```c
+bool is_the_value_30(const void *element, usize index, void *userdata) {
+    return *(const int *)element == 30;
+}
+
+usize idx;
+if (Query.first(FArray.as_queryable(arr, sizeof(int)), is_the_value_30, NULL, &idx)) {
+    printf("found at index %zu\n", idx);
+}
+
+// "any" usage - pass NULL for out_index when you only care whether a
+// match exists, not where
+if (Query.first(FArray.as_queryable(arr, sizeof(int)), is_the_value_30, NULL, NULL)) {
+    printf("contains at least one 30\n");
+}
+```
+
+### Every Collection Type's `as_queryable`
+
+| Type | Call | Yields |
+|---|---|---|
+| FArray | `FArray.as_queryable(arr, stride)` | `const void *` (stride-sized element) |
+| PArray | `PArray.as_queryable(arr)` | `const addr *` |
+| Collection | `Collections.as_queryable(coll)` | `const void *` (stride-sized element) |
+| List | `List.as_queryable(lst)` | `const void *` (delegates to Collections) |
+| SlotArray | `SlotArray.as_queryable(sa)` | `const addr *`, empty slots skipped |
+| Map | `Map.as_queryable(m)` | `const map_entry *`, tombstones skipped |
+| Map | `Map.keys(m)` | `const sc_key_view *`, tombstones skipped |
+| Map | `Map.values(m)` | `const usize *`, tombstones skipped |
+
+Stack does not have `as_queryable` — its usage pattern (top-only push/pop) never called for a scan; adding one later would be a trivial delegation to `Collections.as_queryable`, same as List.
+
+### Map: Finding an Entry By Value
+
+`Map.get` only looks up by key. `Query.first` over `Map.as_queryable` can find an entry by anything about it, including its **value** — something the key-based API has no way to express:
+
+```c
+bool value_is_3(const void *element, usize index, void *userdata) {
+    return ((const map_entry *)element)->value == 3;
+}
+if (Query.first(Map.as_queryable(m), value_is_3, NULL, NULL)) {
+    // found an entry whose value is 3, regardless of its key
+}
+```
+
+`Map.keys`/`Map.values` scan just one half of the pair, when you don't need both:
+
+```c
+sc_queryable ks = Map.keys(m);
+const void *elem;
+while (Query.next(&ks, &elem, NULL)) {
+    const sc_key_view *k = elem;  // {ptr, len} — not guaranteed NUL-terminated
+    printf("%.*s\n", (int)k->len, k->ptr);
+}
+```
+
+### ⚠️ The Mutation Invariant
+
+An `sc_queryable` is a **live view into its source's storage, not a snapshot** — it holds a raw pointer/index position captured at `as_queryable`/`keys`/`values` time. Don't add/append/insert/remove/set/clear/resize/grow the source while a queryable over it is still in use: a dense source's buffer may have been reallocated out from under the queryable's saved pointer; a sparse source's slot layout may have shifted under its saved index. This is the same rule `Iterator`/`SparseIterator` already require. Finish pulling from a queryable (or simply stop using it) before mutating its source, and construct a fresh one afterward to scan again.
+
 ## Buffer Management
 
 ### Non-Owning Views
@@ -457,30 +583,27 @@ indexarray ia = IndexArray.from_farray(fa, sizeof(int));
 
 ## Custom Allocation
 
-Starting with v0.2.0, sigma.collections supports custom allocation through the `alloc_use` pattern. This allows you to:
-- Route allocations through tracking/debugging allocators
-- Use custom memory pools or arenas
-- Integrate with testing frameworks for leak detection
-- Implement domain-specific allocation strategies
+sigma.collections went through several different custom-allocation designs across v0.2.0/v0.2.1/Phase 3A — a module-level `alloc_use` hook was tried and then removed as "vestigial, never fully implemented" (see FR-2603-sigma-collections-001, now marked obsolete). What's described below is the **current, real mechanism**, added in v0.3.0: a **per-instance** override, available on Collection, List, and Stack only.
 
 ### Default Behavior
 
-By default, all collections use standard `malloc`/`free`:
+By default, every collection allocates through the global `Allocator`/`Application` facade (from sigma.memory) — there is no module-wide way to swap that out, and no plain `malloc`/`free` fallback:
 
 ```c
-// Uses malloc/free internally
+// Allocates via the global Allocator facade internally
 indexarray ia = IndexArray.new(100, sizeof(my_struct));
-IndexArray.dispose(ia);  // Calls free internally
+IndexArray.dispose(ia);  // Disposes via the global Allocator facade
 ```
 
-This requires no setup and works without any dependencies beyond libc.
+This is the only behavior FArray, PArray, SlotArray, IndexArray, and Map have — they don't support any allocator override, past or present.
 
-### Setting Custom Allocator
+### Per-Instance Override (Collection, List, Stack)
 
-Wire in a custom allocator using the `alloc_use` function on any collection interface:
+Collection, List, and Stack additionally support binding *one instance* to its own `sc_alloc_use_t *`, independent of every other instance — including other instances of the same type:
 
 ```c
 #include <sigma.core/allocator.h>
+#include <sigma.collections/list.h>
 
 // Define your allocator callbacks
 void *my_alloc(usize size) {
@@ -489,160 +612,79 @@ void *my_alloc(usize size) {
     return ptr;
 }
 
-void my_free(void *ptr) {
+void my_release(void *ptr) {
     log_deallocation(ptr);
     free(ptr);
 }
 
-void *my_realloc(void *ptr, usize size) {
-    void *new_ptr = realloc(ptr, size);
-    log_reallocation(ptr, new_ptr, size);
-    return new_ptr;
-}
-
-// Set up the allocator struct
 sc_alloc_use_t my_allocator = {
     .alloc = my_alloc,
-    .release = my_free,
-    .resize = my_realloc
+    .release = my_release,
+    // .resize, .frame_begin, .frame_end — leave NULL if unused
 };
 
-// Wire into collections (one-time module-level call)
-Collections.alloc_use(&my_allocator);
-
-// Now all collection allocations use your callbacks
-indexarray ia = IndexArray.new(100, sizeof(int));  // Calls my_alloc
-IndexArray.dispose(ia);                             // Calls my_free
+// Bind just this one list to my_allocator; every other List.new(...) call
+// anywhere else in the program is completely unaffected.
+list tracked = List.new_with_allocator(16, sizeof(int), &my_allocator);
+List.dispose(tracked);  // Only frees the struct itself — see below
 ```
 
-### Per-Collection Type
-
-Each collection interface has its own `alloc_use` setter, but all share the same module-level hook:
+The same shape exists on the other two types:
 
 ```c
-// All of these set the same module-level allocator
-Collections.alloc_use(&my_allocator);
-FArray.alloc_use(&my_allocator);
-List.alloc_use(&my_allocator);
-SlotArray.alloc_use(&my_allocator);
-IndexArray.alloc_use(&my_allocator);
-PArray.alloc_use(&my_allocator);
-
-// Typically just use Collections.alloc_use() - it affects all types
+collection coll = Collections.create_with_allocator(capacity, stride, &my_allocator);
+stack s = Stack.new_with_allocator(capacity, &my_allocator);
 ```
 
-### Integration with sigma.test
+**`NULL` is always a plain pass-through** to the type's ordinary constructor (`List.new`, `Stack.new`, `collection_new`) — ​every caller that doesn't opt in behaves exactly as before this feature existed.
 
-The primary use case is integration with the sigma.test framework for leak detection:
+### Growth and Disposal Semantics When Bound
+
+Because a bump/arena allocator (the primary motivating use case) has no way to free one specific prior allocation — only bulk-release everything at once — a bound instance's lifecycle differs from the default path:
+
+- **Growth** allocates the new, larger buffer through `use->alloc` and **orphans** the old one (does not call `use->release` on it).
+- **Dispose** frees the instance's own struct (always, via the global Allocator — that part is small and short-lived) but **skips freeing the buffer** — the bound allocator is expected to reclaim it as part of its own bulk-release (e.g. resetting/releasing the whole arena).
 
 ```c
-#include <sigtest/sigtest.h>
-
-static void register_myapp_tests(void) {
-    // Wire collections into test framework allocator
-    Collections.alloc_use(sigtest_alloc_use());
-    
-    testset("myapp_tests", setup_fn, teardown_fn);
-    testcase("test_creates_indexarray", test_indexarray_lifecycle);
-    testcase("test_list_operations", test_list_ops);
-}
-
-static void test_indexarray_lifecycle(void) {
-    // All allocations tracked by sigma.test
-    indexarray ia = IndexArray.new(100, sizeof(int));
-    
-    // ... perform operations ...
-    
-    IndexArray.dispose(ia);
-    
-    // Test framework will report:
-    // "Total mallocs: 1"
-    // "Total frees: 1"
-    // Leak detection happens automatically
-}
+// Typical arena-scoped pattern: many instances bound to one arena, none
+// individually disposed of their buffers — the arena reclaims everything
+// at once when the parse (or request, or frame) completes.
+list a = List.new_with_allocator(8, sizeof(node *), &parse_arena_use);
+list b = List.new_with_allocator(8, sizeof(node *), &parse_arena_use);
+// ... use a and b ...
+List.dispose(a);  // frees the struct; buffer orphaned
+List.dispose(b);  // frees the struct; buffer orphaned
+arena_release_all(&parse_arena);  // reclaims both buffers in one shot
 ```
 
-### Resetting to Default
+### Two Different Allocators, Two Live Instances
 
-Pass `NULL` to restore default `malloc`/`free` behavior:
+The reason this is per-instance rather than a single module-wide swap: a module-wide hook can't represent "these two collections are bound to two different allocators, both alive right now." Per-instance binding can:
 
 ```c
-Collections.alloc_use(NULL);  // Back to malloc/free
-
-indexarray ia = IndexArray.new(100, sizeof(int));  // Uses malloc again
+list request_scoped = List.new_with_allocator(4, sizeof(req_t *), &request_arena_use);
+list document_scoped = List.new_with_allocator(4, sizeof(doc_t *), &document_arena_use);
+// Both lists are alive simultaneously, each growing/orphaning through its
+// own arena, with zero interaction between the two.
 ```
-
-### Implementation Details
-
-The `alloc_use` pattern uses module-level dispatch:
-
-1. All collection types share a single `sc_alloc_use_t *` hook
-2. Internal helpers (`coll_alloc`, `coll_free`, `coll_realloc`) check the hook:
-   - If hook is NULL → call `malloc`/`free`/`realloc` directly
-   - If hook is set → call hook's function pointers
-3. No overhead when using default allocation (direct to libc)
-
-### Migration from Allocator Facade
-
-Prior to v0.2.0, collections used the deprecated `Allocator` facade from sigma.core. This has been removed:
-
-**Old pattern (< v0.2.0)**:
-```c
-#include <sigma.core/alloc.h>
-
-// Allocator facade was global and mandatory
-indexarray ia = IndexArray.new(100, sizeof(int));
-```
-
-**New pattern (>= v0.2.0)**:
-```c
-// No change needed - malloc/free is the new default
-indexarray ia = IndexArray.new(100, sizeof(int));
-
-// Or wire in custom allocator if needed
-Collections.alloc_use(&my_allocator);
-```
-
-**Breaking change**: If your code included `<sigma.core/alloc.h>` directly, remove it. The collections headers now include `<sigma.core/allocator.h>` for the `sc_alloc_use_t` type definition only.
 
 ### Best Practices
 
-**Set allocator once at startup**:
+**Bind at construction, dispose with the same understanding of ownership**: the allocator you pass to `new_with_allocator`/`create_with_allocator` is fixed for that instance's entire lifetime — there's no way to rebind an existing instance, so there's no "mismatch mid-lifecycle" failure mode to guard against the way a module-wide hook would have had.
+
+**Remember dispose doesn't free the buffer when bound**:
 ```c
-int main(void) {
-    // One-time setup
-    Collections.alloc_use(my_allocator_provider());
-    
-    // Rest of application...
-    return 0;
-}
+// A bound instance's dispose() only frees its own struct - the buffer is
+// the arena's responsibility. Forgetting this and never releasing the
+// arena at all is a real leak; calling free() on the buffer yourself is a
+// double-free once the arena releases it too.
+list scratch = List.new_with_allocator(8, sizeof(int), &parse_arena_use);
+// ... use scratch ...
+List.dispose(scratch);       // frees the struct only
+arena_release(&parse_arena); // this is what actually reclaims the buffer
 ```
 
-**For testing, set per test set**:
-```c
-static void register_tests(void) {
-    Collections.alloc_use(sigtest_alloc_use());
-    testset("my_tests", NULL, NULL);
-    // All tests in this set tracked
-}
-```
-
-**Don't mix allocators**:
-```c
-// BAD: Switching allocators mid-lifecycle
-Collections.alloc_use(&allocator_a);
-indexarray ia = IndexArray.new(100, sizeof(int));  // Uses allocator_a
-
-Collections.alloc_use(&allocator_b);
-IndexArray.dispose(ia);  // Uses allocator_b - MISMATCH!
-
-// GOOD: Consistent allocator for object lifetime
-Collections.alloc_use(&allocator_a);
-indexarray ia = IndexArray.new(100, sizeof(int));
-IndexArray.dispose(ia);  // Both use allocator_a
-```
-
-**Thread safety**: The module-level hook is not thread-safe. Set it once before spawning threads, or use thread-local storage for per-thread allocators.
+**Thread safety**: an `sc_alloc_use_t` itself carries no locking — if the same arena is bound to instances used from multiple threads, the arena's own `alloc`/`release` callbacks are responsible for any synchronization. Binding a fresh, thread-local arena per thread avoids the question entirely.
 
 ## Performance Considerations
 

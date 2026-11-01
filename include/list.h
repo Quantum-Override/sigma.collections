@@ -47,6 +47,16 @@ typedef struct sc_list_i {
      */
     list (*new)(usize, usize);
     /**
+     * @brief Create a new list bound to a caller-supplied allocator-use
+     *        (FR-2603-sigma-collections-007). The instance grows/orphans
+     *        through `use` instead of the global Allocator/Application
+     *        facade; NULL behaves exactly like `List.new`.
+     * @param capacity Initial list capacity
+     * @param elem_size Size of each element in the list
+     * @param use Allocator-use to bind this instance to, or NULL
+     */
+    list (*new_with_allocator)(usize capacity, usize elem_size, sc_alloc_use_t *use);
+    /**
      * @brief Dispose of the list and free associated resources.
      * @param lst The list to dispose of
      */
@@ -113,5 +123,14 @@ typedef struct sc_list_i {
      * @param lst The list to clear
      */
     void (*clear)(list);
+    /**
+     * @brief Produce a heapless queryable over the list's elements, for
+     *        Query.next/Query.first.
+     * @param lst The list to query
+     * @return An sc_queryable ready to scan
+     * @warning Do not mutate lst while the returned queryable is in use —
+     *          see the INVARIANT note in query.h.
+     */
+    sc_queryable (*as_queryable)(list lst);
 } sc_list_i;
 extern const sc_list_i List;

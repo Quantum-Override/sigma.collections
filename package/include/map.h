@@ -22,6 +22,7 @@
 
 #include <sigma.core/allocator.h>
 #include <sigma.core/types.h>
+#include "query.h"
 
 /**
  * @brief Opaque map handle
@@ -198,6 +199,48 @@ typedef struct sc_map_i {
      * @endcode
      */
     sparse_iterator (*create_iterator)(map m);
+
+    /**
+     * @brief Produce a heapless queryable over the map's entries
+     *        (key + key_len + value together), for Query.next/Query.first.
+     *        Skips empty and tombstone slots automatically.
+     * @param m The map to query
+     * @return An sc_queryable yielding `const map_entry *` per element
+     * @warning Do not set/remove on m while the returned queryable is in
+     *          use — same rule as `create_iterator` above, and see the
+     *          INVARIANT note in query.h.
+     *
+     * Example:
+     * @code
+     * sc_queryable q = Map.as_queryable(m);
+     * const void *elem; usize idx;
+     * while (Query.next(&q, &elem, &idx)) {
+     *     const map_entry *entry = elem;
+     *     printf("%.*s => %zu\n", (int)entry->key_len, entry->key, entry->value);
+     * }
+     * @endcode
+     */
+    sc_queryable (*as_queryable)(map m);
+
+    /**
+     * @brief Produce a heapless queryable over just the map's keys.
+     *        Skips empty and tombstone slots automatically.
+     * @param m The map to query
+     * @return An sc_queryable yielding `const sc_key_view *` per element
+     * @warning Do not set/remove on m while the returned queryable is in
+     *          use — see the INVARIANT note in query.h.
+     */
+    sc_queryable (*keys)(map m);
+
+    /**
+     * @brief Produce a heapless queryable over just the map's values.
+     *        Skips empty and tombstone slots automatically.
+     * @param m The map to query
+     * @warning Do not set/remove on m while the returned queryable is in
+     *          use — see the INVARIANT note in query.h.
+     * @return An sc_queryable yielding `const usize *` per element
+     */
+    sc_queryable (*values)(map m);
 
 } sc_map_i;
 
